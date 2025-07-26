@@ -1,0 +1,67 @@
+You can also just declare in C since the issues with section placement have been fixed.
+
+If it's declared in C:
+
+struct _tri
+{
+  uint8_t x1;
+  uint8_t y1;
+...
+};
+
+struct _tri triangles[MAXNUM];
+
+C allocates the memory which you can see in the list file if you're using --list.  Then, as triangles is in global scope and in memory, asm finds it with:
+
+EXTERN _triangles
+
+LD HL,_triangles  ;; you have the address of that array
+
+
+
+Mike is doing the other direction.  The memory space is reserved in asm:
+
+SECTION code_user   ;; going to the main binary
+
+PUBLIC _triangles   ;; put the name into global scope
+
+_triangles:
+   defs whatever
+
+Reserve space with defs or load triangles from a binary file:
+
+_triangles:
+   INCBIN "triangles.bin"
+
+Or define the triangles in place:
+
+_triangles:
+
+   ;; [0]
+
+   defb [x1 here]
+   defb [x2 here]
+   ...
+
+Or load from a text file rather than binary:
+
+_triangles:
+   INCLUDE "triangles.inc"
+
+And triangles.inc would be text defb etc.
+
+If memory is reserved in asm as above, then you tell the c compiler "it's out there somewhere" and what it is:
+
+struct _tri
+{
+  uint8_t x1;
+  uint8_t y1;
+...
+};
+
+extern struct _tri triangles[MAXNUM];   // compiler knows how big the array is
+extern struct _tri triangles[];   // compiler does not know how big the array is
+
+I'm guessing You don't really want to do that as it'll use IX/IY and do offsets, where as global memory will be addressed directly
+
+

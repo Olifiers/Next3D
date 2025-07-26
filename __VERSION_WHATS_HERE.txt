@@ -1,0 +1,3 @@
+- This now includes the asm implementation of the Bresenham draw routine, as optimised as I can make it.
+- Implemented filled trig in C
+- Changed asm PlotPixel8K to use b as colour since drawLine needed d for deltax
