@@ -1,0 +1,31 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Build",
+      "type": "shell",
+      "command": "${workspaceFolder}/build.bat",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Run Emulator",
+      "type": "shell",
+      "command": "${workspaceFolder}/emu.bat",
+      "dependsOn": ["Build"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Build and Run",
+      "dependsOn": ["Build", "Run Emulator"],
+      "dependsOrder": "sequence",
+      "group": {
+        "kind": "build",
+        "isDefault": false
+      }
+    }
+  ]
+}

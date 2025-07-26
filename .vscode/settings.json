@@ -1,0 +1,9 @@
+{
+  "C_Cpp.intelliSenseEngine": "Tag Parser",
+  "files.associations": {
+    "*.asm": "asm",
+    "*.inc": "asm"
+  },
+  "editor.tabSize": 4,
+  "editor.insertSpaces": false
+}

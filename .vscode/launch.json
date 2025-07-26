@@ -1,0 +1,32 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Build & Launch Emulator",
+      "type": "cppvsdbg",
+      "request": "launch",
+
+      // ← launch via cmd.exe
+      "program": "C:\\Windows\\System32\\cmd.exe",
+      "args": [
+        "/C",
+        "${workspaceFolder}\\emu.bat"
+      ],
+
+      // ← build task name
+      "preLaunchTask": "Build",
+
+      // ← ensure it runs in your workspace folder
+      "cwd": "${workspaceFolder}",
+
+      // ← send all output to the integrated terminal
+      "console": "integratedTerminal",
+      "stopAtEntry": false,
+
+      // ← disable DLL-load messages
+      "logging": {
+        "moduleLoad": false
+      }
+    }
+  ]
+}

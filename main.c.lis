@@ -1,4 +1,4 @@
-C:/Users/NTHunter/AppData/Local/Temp/zcc00005628ECD33.asm:
+C:/Users/Flash/AppData/Local/Temp/zcc00003820FE323.asm:
      1                          MODULE main_c
      2                          LINE 0, "main.c"
 main.c:
@@ -1438,33 +1438,35 @@ main.c:
   1433  0338  f1                	pop	af
   1434  0339  33                	inc	sp
   1435  033a  2e04              	ld	l,0x04
-  1436  033c  c30000            	jp	_zx_border_fastcall
-  1437                          	SECTION data_compiler
-  1438                          _x:
-  1439  0000  00                	DEFB +0x00
-  1440                          _y:
-  1441  0001  00                	DEFB +0x00
-  1442                          _colour:
-  1443  0002  0f                	DEFB +0x0f
-  1444                          _x1:
-  1445  0003  14                	DEFB +0x14
-  1446                          _y1:
-  1447  0004  0a                	DEFB +0x0a
-  1448                          _x2:
-  1449  0005  5a                	DEFB +0x5a
-  1450                          _y2:
-  1451  0006  50                	DEFB +0x50
-  1452                          _p0:
-  1453  0007  64                	DEFB +0x64
-  1454  0008  0a                	DEFB +0x0a
-  1455                          _p1:
-  1456  0009  96                	DEFB +0x96
-  1457  000a  78                	DEFB +0x78
-  1458                          _p2:
-  1459  000b  aa                	DEFB +0xaa
-  1460  000c  3c                	DEFB +0x3c
-  1461                          _swap:
-  1462  000d  00                	DEFB +0x00
-  1463  000e  00                	DEFB +0x00
-  1464                          	SECTION IGNORE
-  1465                          
+  1436  033c  cd0000            	call	_zx_border_fastcall
+  1437                          l_main_00102:
+  1438  033f  18fe              	jr	l_main_00102
+  1439                          	SECTION data_compiler
+  1440                          _x:
+  1441  0000  00                	DEFB +0x00
+  1442                          _y:
+  1443  0001  00                	DEFB +0x00
+  1444                          _colour:
+  1445  0002  0f                	DEFB +0x0f
+  1446                          _x1:
+  1447  0003  14                	DEFB +0x14
+  1448                          _y1:
+  1449  0004  0a                	DEFB +0x0a
+  1450                          _x2:
+  1451  0005  5a                	DEFB +0x5a
+  1452                          _y2:
+  1453  0006  50                	DEFB +0x50
+  1454                          _p0:
+  1455  0007  64                	DEFB +0x64
+  1456  0008  0a                	DEFB +0x0a
+  1457                          _p1:
+  1458  0009  96                	DEFB +0x96
+  1459  000a  78                	DEFB +0x78
+  1460                          _p2:
+  1461  000b  aa                	DEFB +0xaa
+  1462  000c  3c                	DEFB +0x3c
+  1463                          _swap:
+  1464  000d  00                	DEFB +0x00
+  1465  000e  00                	DEFB +0x00
+  1466                          	SECTION IGNORE
+  1467                          

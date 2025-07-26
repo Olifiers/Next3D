@@ -1,0 +1,20 @@
+{
+  "configurations": [
+    {
+      "name": "z88dk (GCC-style IntelliSense)",
+      "compilerPath": "",                     // ? disable probing
+      "intelliSenseMode": "gcc-x64",         // ? force GCC-style parsing
+      "includePath": [
+        "${workspaceFolder}/**",
+        "C:/z88dk/include"                   // point to your z88dk includes
+      ],
+      "defines": [
+        "Z88DK",
+        "Z88DK_C"
+      ],
+      "cStandard": "c11",
+      "cppStandard": "c++17"
+    }
+  ],
+  "version": 4
+}

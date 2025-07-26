@@ -141,6 +141,11 @@ void main(void)
     PlotPixel8K(1, 2, 3);
     drawFillTrig (p0, p1, p2, colour);
     zx_border(INK_GREEN);
-
+   
+    while (0 == 0)
+    {
+        /* code */
+    }
+    
     return;
 }
