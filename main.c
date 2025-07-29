@@ -29,17 +29,17 @@ Point p1 = {150, 120};
 Point p2 = {170, 60};
 Point swap = {0, 0};
 
-// PUBLIC x1, y1, x2, y2, colour
-
+extern void stop(void);                                             // asm to stop program for debugging
 extern void setCPU(void);                                           // asm to set CPU parameters to 28MHz etc.
 extern void initL2(void);                                           // asm to initialise Layer2 screen mode, addresses, banks etc.
 extern void clearL2(uint8_t colour) __z88dk_fastcall;               // asm to clear the Layer2 screen (horribly done)
 extern void PlotPixel8K(uint8_t xcoord, uint8_t ycoord, uint8_t colour) __z88dk_callee;
+extern void drawL2(uint8_t x1coord, uint8_t y1coord, uint8_t x2coord, uint8_t y2coord, uint8_t colour) __z88dk_callee;
 extern void drawLine(uint8_t x1, uint8_t y1, uint8_t x2, uint8_t y2, uint8_t colour) __z88dk_callee;
 // extern void drawLine(void) __z88dk_fastcall;
 uint8_t max(uint8_t a, uint8_t b);                                  // max implementation, finds the larger of two numbers
 void drawFillTrig(Point pt0, Point pt1, Point pt2, uint8_t colour);    // Filled triangle routine declaration
-uint8_t Interpolate(uint8_t i0, uint8_t d0, uint8_t i1, uint8_t d1, uint8_t* values);
+uint8_t interpolate(uint8_t i0, uint8_t d0, uint8_t i1, uint8_t d1, uint8_t* values);
 
 
 uint8_t max(uint8_t a, uint8_t b)                                   // Finds larger between two values
@@ -51,7 +51,7 @@ uint8_t max(uint8_t a, uint8_t b)                                   // Finds lar
     }
 }
 
-uint8_t Interpolate(uint8_t i0, uint8_t d0, uint8_t i1, uint8_t d1, uint8_t* values) {
+uint8_t interpolate(uint8_t i0, uint8_t d0, uint8_t i1, uint8_t d1, uint8_t* values) {
     if (i0 == i1) {
         values[0] = d0;
         return 1;
@@ -81,9 +81,9 @@ void drawFillTrig(Point p0, Point p1, Point p2, uint8_t color) {
 
     // Interpolated x-values
     uint8_t x01[SCREEN_HEIGHT], x12[SCREEN_HEIGHT], x02[SCREEN_HEIGHT];
-    uint8_t len01 = Interpolate(p0.y, p0.x, p1.y, p1.x, x01);
-    uint8_t len12 = Interpolate(p1.y, p1.x, p2.y, p2.x, x12);
-    uint8_t len02 = Interpolate(p0.y, p0.x, p2.y, p2.x, x02);
+    uint8_t len01 = interpolate(p0.y, p0.x, p1.y, p1.x, x01);
+    uint8_t len12 = interpolate(p1.y, p1.x, p2.y, p2.x, x12);
+    uint8_t len02 = interpolate(p0.y, p0.x, p2.y, p2.x, x02);
 
     // Merge x01 and x12 into x012
     uint8_t x012[SCREEN_HEIGHT];
@@ -135,17 +135,30 @@ void main(void)
     //    drawLine((x + loop), (y - loop), 100, 120, colour);
     //}
 
-    drawLine(x1, y1, x2, y2, colour);
+    //drawLine(x1, y1, x2, y2, colour);
     zx_border(INK_YELLOW);
 
-    PlotPixel8K(1, 2, 3);
-    drawFillTrig (p0, p1, p2, colour);
+    //PlotPixel8K(1, 2, 3);
+    //drawFillTrig (p0, p1, p2, colour);
     zx_border(INK_GREEN);
-   
-    while (0 == 0)
-    {
-        /* code */
-    }
-    
+
+    //drawL2(10, 105, 10, 5, 0);  // Test vertical line drawing
+    //drawL2(250, 10, 5, 10, 0);  // Test horizontal Line drawing
+    drawL2(15, 100, 230, 190, 0);   // Test horizontalish right drawing
+    zx_border(INK_RED);
+    drawL2(200, 10, 30, 90, 240);   // Test horizontalish left drawing
+    zx_border(INK_YELLOW);
+    drawL2(30, 20, 40, 170, 255);   // Test verticalish right drawing
+    zx_border(INK_GREEN);
+    drawL2(255, 30, 200, 130, 250); // Test verticalish left drawing
+    zx_border(INK_BLUE);
+    drawL2(50, 40, 250, 40, 200);   // Test Horizontal
+    zx_border(INK_MAGENTA);
+    drawL2(128, 170, 128, 20, 210); // Test Vertical
+    zx_border(INK_CYAN);
+
+    while(1){};
+
+
     return;
 }

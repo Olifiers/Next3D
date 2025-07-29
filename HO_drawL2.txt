@@ -1,0 +1,102 @@
+drawL2:
+;=========================================================================
+;   HL = Y1X1, DE = Y2X2, C = colour
+;=========================================================================
+    ld a, d             ; Loads y2 into a
+    cp h                ; Compares y1 with y2
+    jr z, draw_flat_h   ; If y1 = y2, z has been set, it's an horizontal line, jump
+    jr c, swap_coords   ; If y2 < y1, c has been set, needs swapping coords to draw downwards, jump
+drawL2_draw:            ; Since y2 > y1, all is fine, we draw downwards
+    ld a, d             ; Loads y2 into a
+    sub h               ; Subtracts y2 - y1 to get how many pixels donwwards are we drawing
+    ld b, a             ; Stores the result of y2 - y1 (deltay) into b, the amount of vertical pixels to draw downwards - we no longer need y2 (d)
+    ld a, e             ; Loads x2 into a
+    cp l                ; Compares x1 with x2
+    jr z, draw_flat_v   ; If x1 = x2, z has been set, it's a vertical line, jump
+    jr c, draw_left     ; If x2 < x1 we draw right to left by jumping, otherwise we continue to draw left to right by draw_right:
+draw_right:             ; Here x2 > x1, so we draw left to right
+    sub l               ; x2 was in a, we subtracted x1, now a has deltax. We free x2 (e) here.
+    ld d, a             ; Load deltax into d (d was freed when we calculated deltay some way above)
+    cp b                ; deltax is still in a, so we can use it to compare with deltay (b)
+    jr c, right_vertish ; deltay is larger, the line is vertical-ish, jump to subtract deltay - deltax, otherwise carry on right_horish:
+right_horish:           ; deltax is larger, the line is horizontal-ish | RECAP: deltax d | deltay b | hl y1xy | e is free
+    ld a, d             ; Copies deltax into a
+    srl a               ; Shifts a logically, so now a has deltax / 2 (Bresenham's initial error term value)
+    sub b               ; Bresenham's now error = error - deltay, stored in a
+    ld e, a             ; Stores new error in e
+    jr nc, drawing_right_horish  ; If the sub did not result in a borrow (error >= deltay), no cary is set and need to slope yet. If error < deltay, slope
+right_horish_slope:     ; We need to increase y to slope down
+    add d               ; a has the error, we add deltax to it, so a has error = error + deltax
+    ld e, a             ; Updates e with the new error value
+    inc h               ; y1 is incremented, slope has taken place
+drawing_right_horish:   ; Here we draw horizontally, increment x1, and decrement deltax as it's our loop
+    ld a, h             ; Loads h (y1) into a for preservation
+    ex af, af'          ; Stores y1 into a'
+    call PlotPixel8K    ; PlotPixel8K destroys h, thus why we're preserving it in a'
+    ex af, af'          ; Brings y1 into a
+    ld h, a             ; Restores y1 into h
+    inc l               ; Increment x1
+    dec d               ; Decrement deltax
+    ret z               ; If deltax (d) = 0, we are done, reached the end of the line
+    jp right_horish     ; Loops back to carry on drawing the line
+right_vertish:          ; deltay is larger, meaning the line is vertical-ish, so subtract delta y - deltax to get slope value
+    ; MISSING CODE HERE!!!
+draw_left:
+    ; MISSING CODE HERE!!!
+    ret
+draw_flat_v:            ; x1 = x2, draws a vertical line from y1 to y2, as we already know y1 < y2
+    ld d, h             ; PlotPixel8K destroys h, so we preserve it in d (y2) as we don't need it in this case, we use deltay (b)
+drawing_flat_v:
+    ld h, d                 ; Restores h which was destroyed by PlotPixel8K
+    call PlotPixel8K        ; Plots at x1, y1 (l, h) with colour c -- destroys h!
+    inc d                   ; Increases y1 by 1
+    dec b                   ; Decreases deltay by 1
+    jr nz, drawing_flat_v   ; While deltay > 0, loop and keep drawing
+    ret                     ; deltay = 0, end of routine
+draw_flat_h:
+    ld a, e             ; Loads x2 into a
+    cp l                ; Compares x1 with x2
+    jr c, swap_x        ; if x2 < x1, c has been set, needs swapping x1 with x2, if not, carry on
+    sub l               ; a = x2 - x1
+    ld b, a             ; Loads result of x2 - x1 into b, the length of our straight line
+drawing_flat_h:
+    call PlotPixel8K        ; Plots at x1, y1 (l, h) with colour c
+    inc l                   ; Increases x1 by 1
+    dec b                   ; Decreases the length of the flat line by 1
+    jr nz, drawing_flat_h   ; While b not zero, keep increasing l (x1) and drawing to the right
+    ret                     ; b is zero, line is drawn, end of routine
+swap_x:
+    ex de, hl           ; We don't care about y1y2 anyway because they are equal, so just swap x1 with x2 with ex
+    jp draw_flat_h      ; Goes back to the start of draw_flat_h. Will run x2 < x1 comparison again, optimise later
+swap_coords:
+    ex de, hl           ; Swaps coords x1y1 with x2y2
+    jp drawL2_draw      ; Returns with coords swapped around
+
+; extern void PlotPixel8K(uint8_t xcoord, uint8_t ycoord, uint8_t colour) __z88dk_callee
+PUBLIC _PlotPixel8K, PlotPixel8K
+_PlotPixel8K:
+    	
+    ;jp _PlotPixel8K
+   	pop hl          ; Loads the stack value (sp) into hl for restoring later and moves variables into top of stack
+   	pop de          ; Loads next stack entry into e = x, d = y
+   	dec sp          ; Moves the stack up 1 byte, discarding a value and getting us to the third param, colour
+   	ex (sp), hl     ; Restores the original value of the stack from hl, and puts the colour on h from the stack 
+   	ex de, hl       ; Put y and x into hl and the colour into d
+    ld c, d         ; Puts colour into c in order to free d for the drawline
+
+PlotPixel8K:
+;===========================================================================
+;	HL = YX, C = colour -- IMPORTANT: DESTROYS H (and A)
+;===========================================================================
+
+	ld a, h 				    ; 0-31 per bank (8k)
+	and %11100000			    ; 3 bits for the 8 banks we can use
+	swapnib
+	rrca
+	add a, START_8K_BANK		; 8k bank for l2
+	nextreg MMU_REGISTER_0,a  	; set bank to write into
+	ld a, h
+	and %00011111 		        ; this is our Y (0-31)
+	ld h, a 				    ; put it back in H
+	ld (hl), c			        ; draw our pixel
+	ret
