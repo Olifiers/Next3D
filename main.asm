@@ -9,6 +9,8 @@ EXTERN  _colour:    db  0
 
 
 ; extern void stop(void)
+; A debugging tool. Jump here (jp _stop) from your code so you can stop and inspect registers etc.
+; ============================================================================================
 PUBLIC _stop
 _stop:
 
@@ -16,6 +18,8 @@ _stop:
 
 
 ; extern void setCPU(void)
+; Sets the Next CPU to maximum speed, 28MHz
+; ===========================================================================================
 PUBLIC _setCPU
 _setCPU:
 
@@ -25,6 +29,8 @@ _setCPU:
 
 
 ; void initL2(void)
+; Initialises the Layer 2 Next screen mode into 256x192 256 colours in front of the ULA screen
+; ============================================================================================
 PUBLIC _initL2
 _initL2:
 
@@ -40,6 +46,8 @@ _initL2:
 
 ; void clearL2(unsigned char colour) __z88dk_fastcall
 ; param is in L if it's 8-bit, HL if it's 16-bit, DEHL if it's 32-bit.
+; A terrible screen cleaning routine we'll have to optmise the hell out of soon!
+; =============================================================================================
 PUBLIC _clearL2
 _clearL2:
 
@@ -83,6 +91,8 @@ nextX:
 
 
 ; extern void PlotPixel8K(uint8_t xcoord, uint8_t ycoord, uint8_t colour) __z88dk_callee
+; Generic plotting routine that can be called from C
+; ========================================================================================
 PUBLIC _PlotPixel8K, PlotPixel8K
 _PlotPixel8K:
     	
@@ -115,7 +125,7 @@ PlotPixel8K:
 
 PlotPixel8KCol:
 ;===========================================================================
-; This has no C calls and must be called from assembly
+; This has no C calls and must be called from assembly!!!
 ;
 ;	HL = YX -- IMPORTANT: DESTROYS H (and A)
 ; We preset the colour so we can use it directly
@@ -137,6 +147,12 @@ plotPixel8KColour:
 
 
 ; extern void drawL2(uint8_t x1coord, uint8_t y1coord, uint8_t x2coord, uint8_t y2coord, uint8_t colour) __z88dk_callee
+; A Bresenham's line drawing catering for every type of line and direction, inspired by a bunch of Speccy algos online
+; ====================================================================================================================
+; Credits to Andy Dansby (https://github.com/andydansby/bresenham_torture_test/blob/main/bresenham_line3.asm)
+; Credits to Dean Belfield (http://www.breakintoprogram.co.uk)
+; Credits to Gabrield Gambetta's great book 'Computer Graphics From Scratch'
+; Credits to Mike Flash Ware for helping optimise it!
 PUBLIC _drawL2, drawL2
 _drawL2:
 
@@ -230,6 +246,9 @@ draw_line_q2_s:
     jp PlotPixel8KCol   ; This is the last pixel drawn, all done
 
 
+;extern void trigL2(Point pt0, Point pt1, Point pt2, uint8_t colour) __z88dk_callee;
+; A triangle wireframe drawing routine, highly optimised (I hope!)
+;=================================================================================================
 PUBLIC _trigL2, trigL2
 _trigL2:
     pop iy              ; Pops sp into iy
