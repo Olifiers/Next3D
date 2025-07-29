@@ -178,8 +178,6 @@ draw_line_q1_m1:
     inc h               ; Increases line slope by adding to y1
 draw_line_q1_m2:        ; This either increases or decreases l by the self modified code that targeted this
     inc l               ; Self-modified code: It will be either inc l or dec l depending on direction of horizontal drawing
-draw_line_q1_m3:        ; Same as above
-    nop
 draw_line_q1_s:         ; Tests to loop and keep drawing line
     djnz draw_line_q1_l ; Loops until line is drawn and zero flag set
 draw_line_p:            ; Plots the final pixel of the line if we are done with the loop above
@@ -193,7 +191,7 @@ draw_line_q2_l:         ; The main drawline loop for this case
     ld d, h             ; OPTIMISE? Backs up h into d
     call PlotPixel8K    ; PlotPixel8K destroys h, so we need to preserve it
     ld h, d             ; OPTIMISE? Restores h from d
-    or d                ; WHAT IS THIS? IS THIS SPECCY CODE?
+    or d                ; Or the value
     ld a, e             ; Adds deltax to the error
     sub c               ; As above
     jr nc, draw_line_q2_s   ; If we don't get a carry, skip the next part
@@ -201,8 +199,6 @@ draw_line_q2_m1:
     add a, 0            ; This is a target of self-modified code: e = e + deltax
 draw_line_q2_m2:
     inc l               ; Self-modified code: It will be either inc l or dec l depending on direction of horizontal drawing
-draw_line_q2_m3:
-    nop
 draw_line_q2_s:
     ld e, a             ; Restores the error value back in
     inc h               ; Increases y1
