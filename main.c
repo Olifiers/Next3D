@@ -34,6 +34,7 @@ extern void setCPU(void);                                           // asm to se
 extern void initL2(void);                                           // asm to initialise Layer2 screen mode, addresses, banks etc.
 extern void clearL2(uint8_t colour) __z88dk_fastcall;               // asm to clear the Layer2 screen (horribly done)
 extern void PlotPixel8K(uint8_t xcoord, uint8_t ycoord, uint8_t colour) __z88dk_callee;
+extern void PlotPixel8KCol(uint8_t xcoord, uint8_t ycoord, uint8_t colour) __z88dk_callee;
 extern void drawL2(uint8_t x1coord, uint8_t y1coord, uint8_t x2coord, uint8_t y2coord, uint8_t colour) __z88dk_callee;
 extern void drawLine(uint8_t x1, uint8_t y1, uint8_t x2, uint8_t y2, uint8_t colour) __z88dk_callee;
 // extern void drawLine(void) __z88dk_fastcall;

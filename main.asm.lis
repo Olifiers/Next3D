@@ -1,4 +1,4 @@
-C:/Users/NTHunter/AppData/Local/Temp/zcc000050F0CFB62.asm:
+C:/Users/Flash/AppData/Local/Temp/zcc00007238F2E52.asm:
      1                          MODULE main_asm
      2                          LINE 0, "main.asm"
 main.asm:
@@ -112,120 +112,179 @@ main.asm:
     92  0040  3b                   	dec sp          ; Moves the stack up 1 byte, discarding a value and getting us to the third param, colour
     93  0041  e3                   	ex (sp), hl     ; Restores the original value of the stack from hl, and puts the colour on h from the stack
     94  0042  eb                   	ex de, hl       ; Put y and x into hl and the colour into d
-    95  0043  dd6a                  ld ixl, d       ; Puts colour into ixl in order to free d for the drawline
-    96                          
-    97                          PlotPixel8K:
-    98                          ;===========================================================================
-    99                          ;	HL = YX, IXL = colour -- IMPORTANT: DESTROYS H (and A)
-   100                          ;===========================================================================
-   101                          
-   102  0045  7c                	ld a, h 				    ; 0-31 per bank (8k)
-   103  0046  e6e0              	and %11100000			    ; 3 bits for the 8 banks we can use
-   104  0048  ed23              	swapnib
-   105  004a  0f                	rrca
-   106  004b  c612              	add a, START_8K_BANK		; 8L bank for L2
-   107  004d  ed9250            	nextreg MMU_REGISTER_0,a  	; Set bank to write into
-   108  0050  7c                	ld a, h
-   109  0051  e61f              	and %00011111 		        ; This is our y (0-31)
-   110  0053  67                	ld h, a 				    ; Puts y it back in h
-   111  0054  dd7d                  ld a, ixl                   ; Loads colour from ixl into a
-   112  0056  77                	ld (hl), a			        ; Draw our pixel
-   113  0057  c9                	ret
-   114                          
-   115                          
-   116                          ; extern void drawL2(uint8_t x1coord, uint8_t y1coord, uint8_t x2coord, uint8_t y2coord, uint8_t colour) __z88dk_callee
-   117                          PUBLIC _drawL2, drawL2
-   118                          _drawL2:
-   119                          
-   120  0058  dde1                  pop ix              ; Loads the stack value (sp) into ix for restoring later and moves variables into top of stack
-   121  005a  e1                    pop hl              ; Loads y1x1 into hl
-   122  005b  d1                    pop de              ; Loads y2x2 into de
-   123  005c  c1                    pop bc              ; Loads colour into c
-   124  005d  dde5                  push ix             ; Restores stack ret
-   125                          
-   126                          drawL2:
-   127                          ;=========================================================================
-   128                          ;   HL = Y1X1, DE = Y2X2, IXL = colour
-   129                          ;=========================================================================
-   130  005f  dd69                  ld ixl, c           ; Frees c (colour) for use by storing it into ixl
-   131  0061  7a                    ld a, d             ; Loads y2 into a. We'll see if we need to swap coords to draw downwards
-   132  0062  bc                    cp h                ; Compares y1 with y2
-   133  0063  3001                  jr nc, draw_line_1  ; No need to swap the coords, jump
-   134  0065  eb                    ex de, hl           ; Swapped coordinates to ensure y2 > y1, so we draw downwards
-   135                          draw_line_1:
-   136  0066  7a                    ld a, d             ; Loads y2 into a
-   137  0067  94                    sub h               ; y2 - y1
-   138  0068  47                    ld b, a             ; b becomes deltay
-   139  0069  7b                    ld a, e             ; Loads x2 into a
-   140  006a  95                    sub l               ; x2 - x1, a now contains deltax
-   141  006b  3805                  jr c, draw_line_x1  ; If carry is set (x2 - x1 is negative) we are drawing right to left
-   142  006d  4f                    ld c, a             ; c becomes deltax
-   143  006e  3e2c                  ld a, 0x2C          ; Replaces original code above to increase x1 as we're drawing left to right. 0x2C is inc l, and we modify the code to have this
-   144  0070  1805                  jr draw_line_x2     ; Skips next part of the code
-   145                          draw_line_x1:
-   146  0072  ed44                  neg                 ; deltax in a is negative, make it positive
-   147  0074  4f                    ld c, a             ; c becomes deltax
-   148  0075  3e2d                  ld a, 0x2D          ; Replaces original code above to decrease x1 as we're drawing right to left. Self-modifying, puts dec l into the code
-   149                          draw_line_x2:
-   150  0077  329c00                ld (draw_line_q1_m2), a ; a contains either inc l or dec l, and modifies the code accordingly
-   151  007a  32b600                ld (draw_line_q2_m2), a ; Same as above for verticalish lines
-   152  007d  78                    ld a, b             ; We'll check if deltay (b) and deltax (ixl) are 0
-   153  007e  b1                    or c                ; Checking...
-   154  007f  281f                  jr z, draw_line_p   ; There's no line to speak of, let's just draw a point and be done with it
-   155                              ; STATUS: b = deltay | c = deltax | d is free
-   156                          draw_line_q:            ; Find out what kind of diagonal we're dealing with, if horizontalish or verticalish
-   157  0081  78                    ld a, b             ; Loads deltay into a
-   158  0082  b9                    cp c                ; Compares with deltax
-   159  0083  301f                  jr nc, draw_line_q2 ; If no cary, line is verticalish (or perfectly diagonal)
-   160                          draw_line_q1:
-   161  0085  79                    ld a, c             ; a becomes deltax
-   162  0086  329900                ld (draw_line_q1_m1 + 1), a ; Self-modifying code: loads deltax onto the value of the opcode, in this case the loop
-   163  0089  48                    ld c, b             ; c becomes deltay
-   164  008a  47                    ld b, a             ; b becomes deltax for the loop counter
-   165  008b  58                    ld e, b             ; e becomes deltax temporarily...
-   166  008c  cb3b                  srl e               ; now e = deltax / 2 -- aka Bresenham's error
-   167                          draw_line_q1_l:
-   168  008e  54                    ld d, h             ; OPTIMISE? Backs up h into d
-   169  008f  cd4500                call PlotPixel8K    ; PlotPixel8K destroys h, so we need to preserve it
-   170  0092  62                    ld h, d             ; OPTIMISE? Restores h from d
-   171  0093  7b                    ld a, e             ; Loads Bresenham's error into a
-   172  0094  91                    sub c               ; error - deltay
-   173  0095  5f                    ld e, a             ; Stores new error value into e
-   174  0096  3004                  jr nc, draw_line_q1_m2  ; If there's no cary, jump
-   175                          draw_line_q1_m1:
-   176  0098  c600                  add a, 0            ; This 0 here will be modified by the self-modifying code above e = e + deltax
-   177  009a  5f                    ld e, a             ; Stores new error e = e + deltax back into e
-   178  009b  24                    inc h               ; Increases line slope by adding to y1
-   179                          draw_line_q1_m2:        ; This either increases or decreases l by the self modified code that targeted this
-   180  009c  2c                    inc l               ; Self-modified code: It will be either inc l or dec l depending on direction of horizontal drawing
-   181                          draw_line_q1_m3:        ; Same as above
-   182  009d  00                    nop
-   183                          draw_line_q1_s:         ; Tests to loop and keep drawing line
-   184  009e  10ee                  djnz draw_line_q1_l ; Loops until line is drawn and zero flag set
-   185                          draw_line_p:            ; Plots the final pixel of the line if we are done with the loop above
-   186  00a0  cd4500                call PlotPixel8K    ; While PlotPixel8K destroys h, this is the last pixel, thus we don't care
-   187  00a3  c9                    ret
-   188                          draw_line_q2:           ; Here the line is verticalish or perfectly diagonal
-   189  00a4  32b500                ld (draw_line_q2_m1 + 1), a ; Self-modifies the code to store deltay in the loop
-   190  00a7  58                    ld e, b             ; e = deltay
-   191  00a8  cb3b                  srl e               ; e = deltay / 2 (Bressenham's error)
-   192                          draw_line_q2_l:         ; The main drawline loop for this case
-   193  00aa  54                    ld d, h             ; OPTIMISE? Backs up h into d
-   194  00ab  cd4500                call PlotPixel8K    ; PlotPixel8K destroys h, so we need to preserve it
-   195  00ae  62                    ld h, d             ; OPTIMISE? Restores h from d
-   196  00af  b2                    or d                ; WHAT IS THIS? IS THIS SPECCY CODE?
-   197  00b0  7b                    ld a, e             ; Adds deltax to the error
-   198  00b1  91                    sub c               ; As above
-   199  00b2  3004                  jr nc, draw_line_q2_s   ; If we don't get a carry, skip the next part
-   200                          draw_line_q2_m1:
-   201  00b4  c600                  add a, 0            ; This is a target of self-modified code: e = e + deltax
-   202                          draw_line_q2_m2:
-   203  00b6  2c                    inc l               ; Self-modified code: It will be either inc l or dec l depending on direction of horizontal drawing
-   204                          draw_line_q2_m3:
-   205  00b7  00                    nop
-   206                          draw_line_q2_s:
-   207  00b8  5f                    ld e, a             ; Restores the error value back in
-   208  00b9  24                    inc h               ; Increases y1
-   209  00ba  10ee                  djnz draw_line_q2_l ; While zero flag not set, loop back to main loop
-   210  00bc  18e2                  jr draw_line_p      ; If zero flag is finally set, jump to draw our last pixel of the line and... Done
+    95                          ;    ld ixl, d       ; Puts colour into ixl in order to free d for the drawline
+    96  0043  fd6a                  ld iyl, d       ; Puts colour into ixl in order to free d for the drawline
+    97                          
+    98                          PlotPixel8K:
+    99                          ;===========================================================================
+   100                          ;	HL = YX, IXL = colour -- IMPORTANT: DESTROYS H (and A)
+   101                          ;===========================================================================
+   102                          
+   103  0045  7c                	ld a, h 				    ; 0-31 per bank (8k)
+   104  0046  e6e0              	and %11100000			    ; 3 bits for the 8 banks we can use
+   105  0048  ed23              	swapnib
+   106  004a  0f                	rrca
+   107  004b  c612              	add a, START_8K_BANK		; 8L bank for L2
+   108  004d  ed9250            	nextreg MMU_REGISTER_0,a  	; Set bank to write into
+   109  0050  7c                	ld a, h
+   110  0051  e61f              	and %00011111 		        ; This is our y (0-31)
+   111  0053  67                	ld h, a 				    ; Puts y it back in h
+   112                          ;    ld a, ixl                   ; Loads colour from ixl into a
+   113  0054  fd7d                  ld a, iyl                   ; Loads colour from ixl into a
+   114  0056  77                	ld (hl), a			        ; Draw our pixel
+   115  0057  c9                	ret
+   116                          
+   117                          
+   118                          PlotPixel8KCol:
+   119                          ;===========================================================================
+   120                          ; This has no C calls and must be called from assembly
+   121                          ;
+   122                          ;	HL = YX -- IMPORTANT: DESTROYS H (and A)
+   123                          ; we preset the colour so we can use it directly
+   124                          ; by setting plotPixel8KColour
+   125                          ;===========================================================================
+   126                          
+   127  0058  7c                	ld a, h 				    ; 0-31 per bank (8k)
+   128  0059  e6e0              	and %11100000			    ; 3 bits for the 8 banks we can use
+   129  005b  ed23              	swapnib
+   130  005d  0f                	rrca
+   131  005e  c612              	add a, START_8K_BANK		; 8L bank for L2
+   132  0060  ed9250            	nextreg MMU_REGISTER_0,a  	; Set bank to write into
+   133  0063  7c                	ld a, h
+   134  0064  e61f              	and %00011111 		        ; This is our y (0-31)
+   135  0066  67                	ld h, a 				    ; Puts y it back in h
+   136                          plotPixel8KColour:
+   137  0067  3600                  ld (hl), 0			        ; Draw our pixel (colour is already set in plotPixel8KColour)
+   138  0069  c9                	ret
+   139                          
+   140                          
+   141                          ; extern void drawL2(uint8_t x1coord, uint8_t y1coord, uint8_t x2coord, uint8_t y2coord, uint8_t colour) __z88dk_callee
+   142                          PUBLIC _drawL2, drawL2
+   143                          _drawL2:
+   144                          
+   145                          ;    pop ix              ; Loads the stack value (sp) into ix for restoring later and moves variables into top of stack
+   146                          ;    pop hl              ; Loads y1x1 into hl
+   147                          ;    pop de              ; Loads y2x2 into de
+   148                          ;    pop bc              ; Loads colour into c
+   149                          ;    push ix             ; Restores stack ret
+   150                          
+   151                          ; push and pop of ix/iy is 14t, on AFHLDEBC its 10, so, use BC for a small saving, and pop to iy for the colour,
+   152                          ; this will save a LD IYL, C later, as IYL will be set from the pop, it's a small saving, but it adds up
+   153                          ; also, avoid using IX (so allen said, so switch to iy)
+   154                          ; This can use the original PlotPixel8K
+   155                          ;    pop bc
+   156                          ;    pop hl
+   157                          ;    pop de
+   158                          ;    pop iy
+   159                          ;    push bc
+   160                          
+   161                          ; or, even better, set the colour in AF, and store that in the PlotPixel8KCol
+   162  006a  c1                    pop bc
+   163  006b  e1                    pop hl
+   164  006c  d1                    pop de
+   165  006d  fde1                  pop iy          ; sadly, you cannot use POP AF, as the colour is in the Flag register, so we need to use iy for the colour
+   166  006f  c5                    push bc
+   167                          
+   168                          drawL2:
+   169                          ;=========================================================================
+   170                          ;   HL = Y1X1, DE = Y2X2, IXL = colour
+   171                          ;=========================================================================
+   172                          ;    ld ixl, c           ; Frees c (colour) for use by storing it into ixl (IYL is the colour register) - old version
+   173                              ; the other option has iyl preloaded with the colour, so we can use it directly
+   174                          
+   175                              ; these 2 lines are only is you are using the PlotPixel8KCol, which is a self-modifying code that stores the colour in a variable
+   176  0070  fd7d                  ld a,iyl        ; shame you cannot pop AF, so we could do this directly.
+   177  0072  326800                ld (plotPixel8KColour + 1), a ; Store the colour in the plotPixel8KColour variable, so we can use it later
+   178                          
+   179  0075  7a                    ld a, d             ; Loads y2 into a. We'll see if we need to swap coords to draw downwards
+   180  0076  bc                    cp h                ; Compares y1 with y2
+   181  0077  3001                  jr nc, draw_line_1  ; No need to swap the coords, jump
+   182  0079  eb                    ex de, hl           ; Swapped coordinates to ensure y2 > y1, so we draw downwards
+   183                          draw_line_1:
+   184  007a  7a                    ld a, d             ; Loads y2 into a
+   185  007b  94                    sub h               ; y2 - y1
+   186  007c  47                    ld b, a             ; b becomes deltay
+   187  007d  7b                    ld a, e             ; Loads x2 into a
+   188  007e  95                    sub l               ; x2 - x1, a now contains deltax
+   189  007f  3805                  jr c, draw_line_x1  ; If carry is set (x2 - x1 is negative) we are drawing right to left
+   190  0081  4f                    ld c, a             ; c becomes deltax
+   191  0082  3e2c                  ld a, 0x2C          ; Replaces original code above to increase x1 as we're drawing left to right. 0x2C is inc l, and we modify the code to have this
+   192  0084  1805                  jr draw_line_x2     ; Skips next part of the code
+   193                          draw_line_x1:
+   194  0086  ed44                  neg                 ; deltax in a is negative, make it positive
+   195  0088  4f                    ld c, a             ; c becomes deltax
+   196  0089  3e2d                  ld a, 0x2D          ; Replaces original code above to decrease x1 as we're drawing right to left. Self-modifying, puts dec l into the code
+   197                          draw_line_x2:
+   198  008b  32b100                ld (draw_line_q1_m2), a ; a contains either inc l or dec l, and modifies the code accordingly
+   199  008e  32c800                ld (draw_line_q2_m2), a ; Same as above for verticalish lines
+   200  0091  78                    ld a, b             ; We'll check if deltay (b) and deltax (ixl) are 0
+   201  0092  b1                    or c                ; Checking...
+   202                          ;    jp z, PlotPixel8K
+   203  0093  ca5800                jp z, PlotPixel8KCol
+   204                          ;    jr z, draw_line_p   ; There's no line to speak of, let's just draw a point and be done with it - just jump to PlotPixel8K/Col and save a jump
+   205                              ; STATUS: b = deltay | c = deltax | d is free
+   206                          
+   207                          draw_line_q:            ; Find out what kind of diagonal we're dealing with, if horizontalish or verticalish
+   208  0096  78                    ld a, b             ; Loads deltay into a
+   209  0097  b9                    cp c                ; Compares with deltax
+   210  0098  301d                  jr nc, draw_line_q2 ; If no cary, line is verticalish (or perfectly diagonal)
    211                          
+   212                          draw_line_q1:
+   213  009a  79                    ld a, c             ; a becomes deltax
+   214  009b  32ae00                ld (draw_line_q1_m1 + 1), a ; Self-modifying code: loads deltax onto the value of the opcode, in this case the loop
+   215  009e  48                    ld c, b             ; c becomes deltay
+   216  009f  47                    ld b, a             ; b becomes deltax for the loop counter
+   217  00a0  58                    ld e, b             ; e becomes deltax temporarily...
+   218  00a1  cb3b                  srl e               ; now e = deltax / 2 -- aka Bresenham's error
+   219                          
+   220                          ; loop uses D as temp, HL BC E
+   221                          draw_line_q1_l:
+   222  00a3  54                    ld d, h             ; OPTIMISE? Backs up h into d
+   223                          ;    call PlotPixel8K    ; PlotPixel8K destroys h, so we need to preserve it
+   224  00a4  cd5800                call PlotPixel8KCol    ; PlotPixel8K destroys h, so we need to preserve it
+   225  00a7  62                    ld h, d             ; OPTIMISE? Restores h from d
+   226  00a8  7b                    ld a, e             ; Loads Bresenham's error into a
+   227  00a9  91                    sub c               ; error - deltay
+   228  00aa  5f                    ld e, a             ; Stores new error value into e
+   229  00ab  3004                  jr nc, draw_line_q1_m2  ; If there's no cary, jump
+   230                          draw_line_q1_m1:
+   231  00ad  c600                  add a, 0            ; This 0 here will be modified by the self-modifying code above e = e + deltax
+   232  00af  5f                    ld e, a             ; Stores new error e = e + deltax back into e
+   233  00b0  24                    inc h               ; Increases line slope by adding to y1
+   234                          draw_line_q1_m2:        ; This either increases or decreases l by the self modified code that targeted this
+   235  00b1  2c                    inc l               ; Self-modified code: It will be either inc l or dec l depending on direction of horizontal drawing
+   236                          draw_line_q1_s:         ; Tests to loop and keep drawing line
+   237  00b2  10ef                  djnz draw_line_q1_l ; Loops until line is drawn and zero flag set
+   238                          ;draw_line_p:            ; Plots the final pixel of the line if we are done with the loop above
+   239                          ;    jp PlotPixel8K    ; While PlotPixel8K destroys h, this is the last pixel, thus we don't care
+   240  00b4  c35800                jp PlotPixel8KCol    ; While PlotPixel8K destroys h, this is the last pixel, thus we don't care
+   241                          ;    ret                ; if we use a jp, we return from that anyway, so no need for ret here
+   242                          
+   243                          
+   244                          draw_line_q2:           ; Here the line is verticalish or perfectly diagonal
+   245  00b7  32c700                ld (draw_line_q2_m1 + 1), a ; Self-modifies the code to store deltay in the loop
+   246  00ba  58                    ld e, b             ; e = deltay
+   247  00bb  cb3b                  srl e               ; e = deltay / 2 (Bressenham's error)
+   248                          
+   249                          ; loop
+   250                          draw_line_q2_l:         ; The main drawline loop for this case
+   251  00bd  54                    ld d, h             ; OPTIMISE? Backs up h into d
+   252                          ;    call PlotPixel8K    ; PlotPixel8K destroys h, so we need to preserve it
+   253  00be  cd5800                call PlotPixel8KCol    ; PlotPixel8K destroys h, so we need to preserve it
+   254  00c1  62                    ld h, d             ; OPTIMISE? Restores h from d
+   255                          ;   or d                ; Or the value (not sure why this is here)
+   256  00c2  7b                    ld a, e             ; Adds deltax to the error
+   257  00c3  91                    sub c               ; As above
+   258  00c4  3003                  jr nc, draw_line_q2_s   ; If we don't get a carry, skip the next part
+   259                          draw_line_q2_m1:
+   260  00c6  c600                  add a, 0            ; This is a target of self-modified code: e = e + deltax
+   261                          draw_line_q2_m2:
+   262  00c8  2c                    inc l               ; Self-modified code: It will be either inc l or dec l depending on direction of horizontal drawing
+   263                          draw_line_q2_s:
+   264  00c9  5f                    ld e, a             ; Restores the error value back in
+   265  00ca  24                    inc h               ; Increases y1
+   266  00cb  10f0                  djnz draw_line_q2_l ; While zero flag not set, loop back to main loop
+   267                          ;    jp PlotPixel8K    ; While PlotPixel8K destroys h, this is the last pixel, thus we don't care
+   268  00cd  c35800                jp PlotPixel8KCol    ; While PlotPixel8K destroys h, this is the last pixel, thus we don't care
+   269                          ;    jr draw_line_p      ; If zero flag is finally set, jump to draw our last pixel of the line and... Done
+   270                          
