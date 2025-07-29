@@ -92,12 +92,11 @@ _PlotPixel8K:
    	dec sp          ; Moves the stack up 1 byte, discarding a value and getting us to the third param, colour
    	ex (sp), hl     ; Restores the original value of the stack from hl, and puts the colour on h from the stack 
    	ex de, hl       ; Put y and x into hl and the colour into d
-;    ld ixl, d       ; Puts colour into ixl in order to free d for the drawline
-    ld iyl, d       ; Puts colour into ixl in order to free d for the drawline
+    ld iyl, d       ; Puts colour into iyl in order to free d for the drawline
 
 PlotPixel8K:
 ;===========================================================================
-;	HL = YX, IXL = colour -- IMPORTANT: DESTROYS H (and A)
+;	HL = YX, IYL = colour -- IMPORTANT: DESTROYS H (and A)
 ;===========================================================================
 
 	ld a, h 				    ; 0-31 per bank (8k)
@@ -109,8 +108,7 @@ PlotPixel8K:
 	ld a, h
 	and %00011111 		        ; This is our y (0-31)
 	ld h, a 				    ; Puts y it back in h
-;    ld a, ixl                   ; Loads colour from ixl into a
-    ld a, iyl                   ; Loads colour from ixl into a
+    ld a, iyl                   ; Loads colour from iyl into a
 	ld (hl), a			        ; Draw our pixel
 	ret
 
@@ -120,8 +118,8 @@ PlotPixel8KCol:
 ; This has no C calls and must be called from assembly
 ;
 ;	HL = YX -- IMPORTANT: DESTROYS H (and A)
-; we preset the colour so we can use it directly
-; by setting plotPixel8KColour
+; We preset the colour so we can use it directly
+; by setting plotPixel8KColour with self-modifying code
 ;===========================================================================
 
 	ld a, h 				    ; 0-31 per bank (8k)
@@ -134,7 +132,7 @@ PlotPixel8KCol:
 	and %00011111 		        ; This is our y (0-31)
 	ld h, a 				    ; Puts y it back in h
 plotPixel8KColour:	
-    ld (hl), 0			        ; Draw our pixel (colour is already set in plotPixel8KColour)
+    ld (hl), 0			        ; Draw our pixel (colour is going to be set by automodifying the code)
 	ret    
 
 
@@ -142,40 +140,19 @@ plotPixel8KColour:
 PUBLIC _drawL2, drawL2
 _drawL2:
 
-;    pop ix              ; Loads the stack value (sp) into ix for restoring later and moves variables into top of stack
-;    pop hl              ; Loads y1x1 into hl
-;    pop de              ; Loads y2x2 into de
-;    pop bc              ; Loads colour into c
-;    push ix             ; Restores stack ret
-
-; push and pop of ix/iy is 14t, on AFHLDEBC its 10, so, use BC for a small saving, and pop to iy for the colour,
-; this will save a LD IYL, C later, as IYL will be set from the pop, it's a small saving, but it adds up
-; also, avoid using IX (so allen said, so switch to iy)
-; This can use the original PlotPixel8K
-;    pop bc
-;    pop hl
-;    pop de
-;    pop iy
-;    push bc
-
 ; or, even better, set the colour in AF, and store that in the PlotPixel8KCol
-    pop bc
-    pop hl
-    pop de
-    pop iy          ; sadly, you cannot use POP AF, as the colour is in the Flag register, so we need to use iy for the colour
-    push bc    
+    pop bc          ; Loads the stack value (sp) into bc for restoring later and moves variables into top of stack
+    pop hl          ; Loads y1x1 into hl
+    pop de          ; Loads y2x2 into de
+    pop iy          ; Use iyl for the colour
+    push bc         ; Restores the stack value from bc
 
 drawL2:
 ;=========================================================================
-;   HL = Y1X1, DE = Y2X2, IXL = colour
+;   HL = Y1X1, DE = Y2X2, IYL = colour
 ;=========================================================================
-;    ld ixl, c           ; Frees c (colour) for use by storing it into ixl (IYL is the colour register) - old version
-    ; the other option has iyl preloaded with the colour, so we can use it directly
-
-    ; these 2 lines are only is you are using the PlotPixel8KCol, which is a self-modifying code that stores the colour in a variable
-    ld a,iyl        ; shame you cannot pop AF, so we could do this directly.
-    ld (plotPixel8KColour + 1), a ; Store the colour in the plotPixel8KColour variable, so we can use it later
-
+    ld a, iyl           ; Loads colour into a
+    ld (plotPixel8KColour + 1), a ; Store the colour in the plotPixel8KColour through self-modifying the code
     ld a, d             ; Loads y2 into a. We'll see if we need to swap coords to draw downwards
     cp h                ; Compares y1 with y2
     jr nc, draw_line_1  ; No need to swap the coords, jump
@@ -199,16 +176,12 @@ draw_line_x2:
     ld (draw_line_q2_m2), a ; Same as above for verticalish lines
     ld a, b             ; We'll check if deltay (b) and deltax (ixl) are 0
     or c                ; Checking...
-;    jp z, PlotPixel8K
-    jp z, PlotPixel8KCol    
-;    jr z, draw_line_p   ; There's no line to speak of, let's just draw a point and be done with it - just jump to PlotPixel8K/Col and save a jump
+    jp z, PlotPixel8KCol    ; When reaching zero, we're done, draw last pixel
     ; STATUS: b = deltay | c = deltax | d is free
-
 draw_line_q:            ; Find out what kind of diagonal we're dealing with, if horizontalish or verticalish
     ld a, b             ; Loads deltay into a
     cp c                ; Compares with deltax
     jr nc, draw_line_q2 ; If no cary, line is verticalish (or perfectly diagonal)
-
 draw_line_q1:
     ld a, c             ; a becomes deltax
     ld (draw_line_q1_m1 + 1), a ; Self-modifying code: loads deltax onto the value of the opcode, in this case the loop
@@ -216,12 +189,10 @@ draw_line_q1:
     ld b, a             ; b becomes deltax for the loop counter
     ld e, b             ; e becomes deltax temporarily...
     srl e               ; now e = deltax / 2 -- aka Bresenham's error
-
-; loop uses D as temp, HL BC E
+; loop uses d as temp, hl bc e
 draw_line_q1_l:
     ld d, h             ; OPTIMISE? Backs up h into d
-;    call PlotPixel8K    ; PlotPixel8K destroys h, so we need to preserve it
-    call PlotPixel8KCol    ; PlotPixel8K destroys h, so we need to preserve it
+    call PlotPixel8KCol ; PlotPixel8KCol destroys h, so we need to preserve it
     ld h, d             ; OPTIMISE? Restores h from d
     ld a, e             ; Loads Bresenham's error into a
     sub c               ; error - deltay
@@ -235,24 +206,16 @@ draw_line_q1_m2:        ; This either increases or decreases l by the self modif
     inc l               ; Self-modified code: It will be either inc l or dec l depending on direction of horizontal drawing
 draw_line_q1_s:         ; Tests to loop and keep drawing line
     djnz draw_line_q1_l ; Loops until line is drawn and zero flag set
-;draw_line_p:            ; Plots the final pixel of the line if we are done with the loop above
-;    jp PlotPixel8K    ; While PlotPixel8K destroys h, this is the last pixel, thus we don't care
-    jp PlotPixel8KCol    ; While PlotPixel8K destroys h, this is the last pixel, thus we don't care
-;    ret                ; if we use a jp, we return from that anyway, so no need for ret here
-
-
+    jp PlotPixel8KCol    ; This is the last pixel, draws and quits
 draw_line_q2:           ; Here the line is verticalish or perfectly diagonal
     ld (draw_line_q2_m1 + 1), a ; Self-modifies the code to store deltay in the loop
     ld e, b             ; e = deltay
     srl e               ; e = deltay / 2 (Bressenham's error)
-
-; loop
+; loop uses d as temp, hl bc e
 draw_line_q2_l:         ; The main drawline loop for this case
     ld d, h             ; OPTIMISE? Backs up h into d
-;    call PlotPixel8K    ; PlotPixel8K destroys h, so we need to preserve it
-    call PlotPixel8KCol    ; PlotPixel8K destroys h, so we need to preserve it
+    call PlotPixel8KCol    ; PlotPixel8KCol destroys h, so we need to preserve it
     ld h, d             ; OPTIMISE? Restores h from d
-;   or d                ; Or the value (not sure why this is here)
     ld a, e             ; Adds deltax to the error
     sub c               ; As above
     jr nc, draw_line_q2_s   ; If we don't get a carry, skip the next part
@@ -264,6 +227,66 @@ draw_line_q2_s:
     ld e, a             ; Restores the error value back in
     inc h               ; Increases y1
     djnz draw_line_q2_l ; While zero flag not set, loop back to main loop
-;    jp PlotPixel8K    ; While PlotPixel8K destroys h, this is the last pixel, thus we don't care
-    jp PlotPixel8KCol    ; While PlotPixel8K destroys h, this is the last pixel, thus we don't care
-;    jr draw_line_p      ; If zero flag is finally set, jump to draw our last pixel of the line and... Done
+    jp PlotPixel8KCol   ; This is the last pixel drawn, all done
+
+
+PUBLIC _trigL2, trigL2
+_trigL2:
+    pop iy              ; Pops sp into iy
+    pop hl              ; Pops p0.y and p0.x into hl
+    ;ld (l1 + 1), hl     ; Self-modifying code, loads hl into l1: hl (l1 start)
+    ld (l3 + 4), hl     ; Self-modifying code, loads hl into l3: de (l3 end)
+    pop de              ; Pops p1.y and p1.x into de
+    ;ld (l1 + 4), de     ; Self-modifying code, loads de into l1: de (l1 end)
+    ld (l2 + 1), de     ; Self-modifying code, loads de into l2: hl (l2 start)
+    pop bc              ; Pops p2.y and p2.x into bc
+    ld (l2 + 4), bc     ; Self-modifying code, loads bc into l2: de (l2 end)
+    ld (l3 + 1), bc     ; Self-modifying code, loads cd into l3: hl (l3 start)
+    pop bc              ; Pops colour value into c
+    push iy             ; Restore stack
+    ld iyl, c           ; Loads colour into iyl
+
+trigL2:
+l1:                     ; Line 1
+    call drawL2         ; Because hl and de are already set correctly, just draw it
+l2:                     ; Line 2
+    ld hl, 0            ; Self-modified target from above
+    ld de, 0            ; Seld-modified target from above
+    call drawL2         ; Draws line with the modified hl and de with the self-modifying code
+l3:                     ; Line 3
+    ld hl, 0            ; Self-modified target from above
+    ld de, 0            ; Self-modified target from above
+    jp drawL2           ; Draws line with the modified hl and de with the self-modifying code
+    ret                 ; We're done, return nicely
+
+
+;PUBLIC _trigL2, trigL2
+;_trigL2:
+;    pop iy              ; Pops sp into iy
+;    pop hl              ; Pops p0.y and p0.x into hl
+;    ld (iy + 02h), l    ; Loads p0.x into iy + 2
+;    ld (iy + 03h), h    ; Loads p0.y into iy + 3
+;    pop de              ; Pops p1.y and p1.x into de
+;    ld (iy + 04h), e    ; Loads p1.x into iy + 4
+;    ld (iy + 05h), d    ; Loads p1.y into iy + 5
+;    pop bc              ; Pops p2.y and p2.x into bc
+;    ld (iy + 06h), c    ; Loads p2.x into iy + 6
+;    ld (iy + 07h), b    ; Loads p2.y into iy + 7
+;    pop bc              ; Pops colour into c
+;    ld ixl, c           ; Loads colour into ixl
+;
+;trigL2:
+;    call drawL2         ; hl and de already have p0.y, p0,x, p1,y and p1,x
+;    ld l, (iy + 04h)
+;    ld h, (iy + 05h)
+;    ld e, (iy + 06h)
+;    ld d, (iy + 07h)
+;    call drawL2
+;    ld l, (iy + 06h)
+;    ld h, (iy + 07h)
+;    ld e, (iy + 02h)
+;    ld d, (iy + 03h)
+;    call drawL2
+;    ld a, 255
+;    push iy
+;    ret

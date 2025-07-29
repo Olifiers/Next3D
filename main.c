@@ -34,10 +34,8 @@ extern void setCPU(void);                                           // asm to se
 extern void initL2(void);                                           // asm to initialise Layer2 screen mode, addresses, banks etc.
 extern void clearL2(uint8_t colour) __z88dk_fastcall;               // asm to clear the Layer2 screen (horribly done)
 extern void PlotPixel8K(uint8_t xcoord, uint8_t ycoord, uint8_t colour) __z88dk_callee;
-extern void PlotPixel8KCol(uint8_t xcoord, uint8_t ycoord, uint8_t colour) __z88dk_callee;
 extern void drawL2(uint8_t x1coord, uint8_t y1coord, uint8_t x2coord, uint8_t y2coord, uint8_t colour) __z88dk_callee;
-extern void drawLine(uint8_t x1, uint8_t y1, uint8_t x2, uint8_t y2, uint8_t colour) __z88dk_callee;
-// extern void drawLine(void) __z88dk_fastcall;
+extern void trigL2(Point pt0, Point pt1, Point pt2, uint8_t colour) __z88dk_callee;
 uint8_t max(uint8_t a, uint8_t b);                                  // max implementation, finds the larger of two numbers
 void drawFillTrig(Point pt0, Point pt1, Point pt2, uint8_t colour);    // Filled triangle routine declaration
 uint8_t interpolate(uint8_t i0, uint8_t d0, uint8_t i1, uint8_t d1, uint8_t* values);
@@ -136,27 +134,20 @@ void main(void)
     //    drawLine((x + loop), (y - loop), 100, 120, colour);
     //}
 
-    //drawLine(x1, y1, x2, y2, colour);
-    zx_border(INK_YELLOW);
 
     //PlotPixel8K(1, 2, 3);
     //drawFillTrig (p0, p1, p2, colour);
-    zx_border(INK_GREEN);
 
-    //drawL2(10, 105, 10, 5, 0);  // Test vertical line drawing
-    //drawL2(250, 10, 5, 10, 0);  // Test horizontal Line drawing
     drawL2(15, 100, 230, 190, 0);   // Test horizontalish right drawing
-    zx_border(INK_RED);
     drawL2(200, 10, 30, 90, 240);   // Test horizontalish left drawing
-    zx_border(INK_YELLOW);
     drawL2(30, 20, 40, 170, 255);   // Test verticalish right drawing
-    zx_border(INK_GREEN);
     drawL2(255, 30, 200, 130, 250); // Test verticalish left drawing
-    zx_border(INK_BLUE);
     drawL2(50, 40, 250, 40, 200);   // Test Horizontal
-    zx_border(INK_MAGENTA);
     drawL2(128, 170, 128, 20, 210); // Test Vertical
-    zx_border(INK_CYAN);
+
+
+    trigL2(p0, p1, p2, 3);
+    zx_border(INK_MAGENTA);
 
     while(1){};
 
