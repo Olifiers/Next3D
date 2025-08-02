@@ -29,6 +29,8 @@ Point p1 = {150, 120};
 Point p2 = {170, 60};
 Point swap = {0, 0};
 
+//#define break { intrinsic_emit(0xFD); intrinsic_emit(0x00); }
+
 extern void stop(void);                                             // asm to stop program for debugging
 extern void setCPU(void);                                           // asm to set CPU parameters to 28MHz etc.
 extern void initL2(void);                                           // asm to initialise Layer2 screen mode, addresses, banks etc.
@@ -40,7 +42,6 @@ extern void fillTrigL2(Point pt0, Point pt1, Point pt2, uint8_t colour) __z88dk_
 uint8_t max(uint8_t a, uint8_t b);                                  // max implementation, finds the larger of two numbers
 void drawFillTrig(Point pt0, Point pt1, Point pt2, uint8_t colour);    // Filled triangle routine declaration
 uint8_t interpolate(uint8_t i0, uint8_t d0, uint8_t i1, uint8_t d1, uint8_t* values);
-
 
 uint8_t max(uint8_t a, uint8_t b)                                   // Finds larger between two values
 {
@@ -139,20 +140,20 @@ void main(void)
     //PlotPixel8K(1, 2, 3);
     //drawFillTrig (p0, p1, p2, colour);
 
-    drawL2(15, 100, 230, 190, 0);   // Test horizontalish right drawing
-    drawL2(200, 10, 30, 90, 240);   // Test horizontalish left drawing
-    drawL2(30, 20, 40, 170, 255);   // Test verticalish right drawing
-    drawL2(255, 30, 200, 130, 250); // Test verticalish left drawing
-    drawL2(50, 40, 250, 40, 200);   // Test Horizontal
-    drawL2(128, 170, 128, 20, 210); // Test Vertical
+//    drawL2(15, 100, 230, 190, 0);   // Test horizontalish right drawing
+//    drawL2(200, 10, 30, 90, 240);   // Test horizontalish left drawing
+//    drawL2(30, 20, 40, 170, 255);   // Test verticalish right drawing
+//    drawL2(255, 30, 200, 130, 250); // Test verticalish left drawing
+//    drawL2(50, 40, 250, 40, 200);   // Test Horizontal
+//    drawL2(128, 170, 128, 20, 210); // Test Vertical
 
 
-    trigL2(p0, p1, p2, 3);
-    zx_border(INK_MAGENTA);
+//    trigL2(p0, p1, p2, 3);
+//    zx_border(INK_MAGENTA);
 
     p0.x = 80; p0.y = 180;
     //p0.x = 110; p0.y = 180;
-    p1.x = 150; p1.y = 120;
+    p1.x = 190; p1.y = 120;
     p2.x = 90; p2.y = 60;
 
     trigL2(p0, p1, p2, 3);

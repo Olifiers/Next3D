@@ -13,20 +13,29 @@ EXTERN  _colour:    db  0
     Tri_ac_r0: defs 1   ; x
     Tri_ac_r1: defs 1   ; Width/deltax
     Tri_ac_r2: defs 1   ; Height/deltay
-    Tri_ac_r3: defs 1   ; Error Bresenhams
+    Tri_ac_r3: defs 1   ; Berror Bresenhams
     Tri_ac_r4: defs 1   ; Quadrant... Direction... Bit? 0 or 1 -- Flags
     ; Triangle line p0-p1
     Tri_ab_r0: defs 1   ; x
     Tri_ab_r1: defs 1   ; Width/deltax
     Tri_ab_r2: defs 1   ; Height/deltay
-    Tri_ab_r3: defs 1   ; Error Bresenhams
+    Tri_ab_r3: defs 1   ; Berror Bresenhams
     Tri_ab_r4: defs 1   ; Quadrant... Direction... Bit? 0 or 1 -- Flags
     ; Triangle point coordinates
     p0: defs 2          ; p0.y and p0.x
     p1: defs 2          ; p1.y and p1.x
     p2: defs 2          ; p2.y and p2.x
-
-
+; ix: 5 bytes required per line
+; +00: x
+; +01: deltax
+; +02: deltay
+; +03: Bresenhams error
+; +04: Flags / Quadrant
+    XCoord: = 0
+    DeltaX: = 1
+    DeltaY: = 2
+    Berror: = 3
+    Flags: = 4
 ; extern void stop(void)
 ; A debugging tool. Jump here (jp _stop) from your code so you can stop and inspect registers etc.
 ; ============================================================================================
@@ -385,6 +394,7 @@ draw_triangle:
     push hl             ; Stacks hl again, but hl remains restored
     ld bc, (Tri_ac_r0)  ; Loads the first point of the horizontal line
     ld de, (Tri_ab_r0)  ; Loads the second point of the horizontal line
+
     call pri_line_hor   ; Draws the line between the two points, filling this step of the triangle
     pop hl              ; Restores hl
     inc h               ; Increments y *** ORIGINAL CODE IS HL, BUT I THINK IT WANTS TO INCREMENT Y ***
@@ -393,10 +403,10 @@ draw_triangle:
     jr draw_triangle    ; Loops back to top
 
 pri_tri_b:              ; Bresenhams calculations go here
-    ld h, (ix + 3)      ; Loads Bresenhams error into h, works for both lines depending on where ix is pointing to (Tri_ac_r0 or Tri_ab_r0)
-    ld b, (ix + 1)      ; Loads deltax into b
-    ld d, (ix + 2)      ; Loads deltay into d
-    bit 1, (ix + 4)     ; Checks quadrant of line but comparing with the bit on the flag store
+    ld h, (ix + Berror)      ; Loads Bresenhams error into h, works for both lines depending on where ix is pointing to (Tri_ac_r0 or Tri_ab_r0)
+    ld b, (ix + DeltaX)      ; Loads deltax into b
+    ld d, (ix + DeltaY)      ; Loads deltay into d
+    bit 1, (ix + Flags)     ; Checks quadrant of line but comparing with the bit on the flag store
     jr z, pri_tri_b_seq2; If zero, skip piece of code below
     ld a, h             ; Loads error into a
     sub d               ; error = error - deltay
@@ -406,7 +416,7 @@ pri_tri_b:              ; Bresenhams calculations go here
     ld h, a             ; Stores error back on h
     call pri_tri_x      ; Moves the x coordinate ***CHECK THIS!!!***
 pri_tri_b_seq1:         ; Jumps to store the error if no carry, skipping the error + deltax step
-    ld (ix + 3), h      ; Stores the error into its place for this specific line
+    ld (ix + Berror), h      ; Stores the error into its place for this specific line
     ret                 ; We're done here and return
 pri_tri_b_seq2:
     call pri_tri_x      ; Moves the x coordinate of the line left or right depending on case
@@ -414,17 +424,17 @@ pri_tri_b_seq2:
     sub d               ; Subtracts deltay (error = error - deltay)
     jr nc, pri_tri_b_seq2; If no carry, loops right back up to work on error again until carry set
     add b               ; Carry was set, we now add deltax (error = error + deltax)
-    ld (ix + 3), h      ; Stores the error into its place for this specific line
+    ld (ix + Berror), h      ; Stores the error into its place for this specific line
     ret                 ; We're done here and return
 
 pri_tri_x:              ; Moves x coord 1 pixel left or right depending on the line type
-    bit 0, (ix + 4)     ; Sets the direction we're headed towards with x, left or right
+    bit 0, (ix + Flags)     ; Sets the direction we're headed towards with x, left or right
     jr nz, pri_tri_x_seq1; If not zero, we're going left, not right, so decrease
-    inc (ix + 0)        ; Increases line's x
+    inc (ix + XCoord)        ; Increases line's x
     ret                 ; *** SIMPLIFIED CODE FROM 16bit, THERE WAS MORE TO IT ORIGINALLY, COULD BREAK
 pri_tri_x_seq1:
-    dec (ix + 0)        ; Decreases line's x
-    ret                 ; *** SIMPLIFIED CODE FROM 16bit, THERE WAS MORE TO IT ORIGINALLY, COULD BREAK
+    dec (ix + XCoord)        ; Decreases line's x
+    ret                 ; *** SIMPLIFIED CODE FROM 16bit, THERE WAS MORE TO IT ORIGINALLY, COULD_BREAK
 
 ; Initialises a block of variables for a line
 ; ix points at the start of the block
@@ -462,8 +472,10 @@ pri_tri_p0p2:           ; Initialises the line p0-p2 (actually p2-p0)
     ;jp _stop            ; DEBUG: ALL GOOD UP TO HERE
     ;jr pri_tri_i        ; Unnecessary here as pri_tri_i is right below
 
+
+; L and E = x1 and x2
 pri_tri_i:              ; Generic primitive triangle initialisation
-    ld (ix + 0), e      ; Stores first x from calling code back into the address - DEBUG: ix+0 has 5A here
+    ld (ix + XCoord), e      ; Stores first x from calling code back into the address - DEBUG: ix+0 has 5A here
     ld a, l             ; Loads the second x from calling code into a
     sub e               ; Subtract both x to get to deltax
     ld h, a             ; h now has deltax
@@ -484,22 +496,22 @@ pri_tri_i_seq1:
     set 1, c            ; And we set the deltay > deltax flag this way
     ;jp _stop            ; DEBUG: ALL GOOD UP TO HERE. deltay (d) has 0A, deltax (h) has 78, x (ix+0) has 5A, c has 02
 pri_tri_i_seq2:
-    ld (ix + 1), h      ; We store back deltax into its place in memory for the current line
-    ld (ix + 2), d      ; We store back deltay into its place in memory for the current line
+    ld (ix + DeltaX), h      ; We store back deltax into its place in memory for the current line
+    ld (ix + DeltaY), d      ; We store back deltay into its place in memory for the current line
     ;SRL H RR L !!! *** NEEDS DOUBLE CHECKING THIS
     srl h               ; error = error / 2
-    ld (ix + 3), h      ; New error stored into its place in memory for the current line
-    ld (ix + 4), c      ; New flags stored into its place in memory for the current line
+    ld (ix + Berror), h      ; New error stored into its place in memory for the current line
+    ld (ix + Flags), c      ; New flags stored into its place in memory for the current line
     ;jp _stop            ; DEBUG: ALL GOOD UP TO HERE. x (ix+0) has 5A, deltax (ix+1) has 78, deltay (ix+2) has 0A, error (ix+3) has 3C (half of deltay), flags (ix+4) has 02, ix has 94F8
     ret
 
 pri_tri_lc:
-    bit 1, (ix + 4)     ; Return the correct loop counter by checking the flag state storage, if the value in ix + 4 has a bit 1 on pos 1
+    bit 1, (ix + Flags)     ; Return the correct loop counter by checking the flag state storage, if the value in ix + Flags has a bit 1 on pos 1
     jr z, pri_tri_lc_seq; If loop counter returns zero, jump
-    ld b, (ix + 1)      ; Loads deltax into b for looping
+    ld b, (ix + DeltaX)      ; Loads deltax into b for looping
     ret
 pri_tri_lc_seq:
-    ld b, (ix + 2)      ; Loads deltay into b for looping
+    ld b, (ix + DeltaY)      ; Loads deltay into b for looping
     ;jp _stop            ; DEBUG: SEEMS LIKE ALL GOOD UP TO HERE?
     ret 
 

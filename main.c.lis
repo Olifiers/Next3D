@@ -1,4 +1,4 @@
-C:/Users/NTHunter/AppData/Local/Temp/zcc00005968051E3.asm:
+C:/Users/Flash/AppData/Local/Temp/zcc0000247CFAD53.asm:
      1                          MODULE main_c
      2                          LINE 0, "main.c"
 main.c:
@@ -1402,159 +1402,97 @@ main.c:
   1397  02f1  360a              	ld	(hl),0x0a
   1398  02f3  210100            	ld	hl,_y
   1399  02f6  3628              	ld	(hl),0x28
-  1400  02f8  af                	xor	a, a
-  1401  02f9  57                	ld	d,a
-  1402  02fa  1ebe              	ld	e,0xbe
-  1403  02fc  d5                	push	de
-  1404  02fd  1164e6            	ld	de,0xe664
-  1405  0300  d5                	push	de
-  1406  0301  3e0f              	ld	a,0x0f
-  1407  0303  f5                	push	af
-  1408  0304  33                	inc	sp
-  1409  0305  cd0000            	call	_drawL2
-  1410  0308  115af0            	ld	de,0xf05a
-  1411  030b  d5                	push	de
-  1412  030c  110a1e            	ld	de,0x1e0a
-  1413  030f  d5                	push	de
-  1414  0310  3ec8              	ld	a,0xc8
-  1415  0312  f5                	push	af
-  1416  0313  33                	inc	sp
-  1417  0314  cd0000            	call	_drawL2
-  1418  0317  11aaff            	ld	de,0xffaa
-  1419  031a  d5                	push	de
-  1420  031b  111428            	ld	de,0x2814
-  1421  031e  d5                	push	de
-  1422  031f  3e1e              	ld	a,0x1e
-  1423  0321  f5                	push	af
-  1424  0322  33                	inc	sp
-  1425  0323  cd0000            	call	_drawL2
-  1426  0326  1182fa            	ld	de,0xfa82
-  1427  0329  d5                	push	de
-  1428  032a  111ec8            	ld	de,0xc81e
-  1429  032d  d5                	push	de
-  1430  032e  3eff              	ld	a,0xff
-  1431  0330  f5                	push	af
-  1432  0331  33                	inc	sp
-  1433  0332  cd0000            	call	_drawL2
-  1434  0335  1128c8            	ld	de,0xc828
-  1435  0338  d5                	push	de
-  1436  0339  1128fa            	ld	de,0xfa28
-  1437  033c  d5                	push	de
-  1438  033d  3e32              	ld	a,0x32
-  1439  033f  f5                	push	af
-  1440  0340  33                	inc	sp
-  1441  0341  cd0000            	call	_drawL2
-  1442  0344  1114d2            	ld	de,0xd214
-  1443  0347  d5                	push	de
-  1444  0348  11aa80            	ld	de,0x80aa
-  1445  034b  d5                	push	de
-  1446  034c  3e80              	ld	a,0x80
-  1447  034e  f5                	push	af
-  1448  034f  33                	inc	sp
-  1449  0350  cd0000            	call	_drawL2
-  1450  0353  3e03              	ld	a,0x03
-  1451  0355  f5                	push	af
-  1452  0356  33                	inc	sp
-  1453  0357  2a0b00            	ld	hl,(_p2)
-  1454  035a  e5                	push	hl
-  1455  035b  2a0900            	ld	hl,(_p1)
-  1456  035e  e5                	push	hl
-  1457  035f  2a0700            	ld	hl,(_p0)
-  1458  0362  e5                	push	hl
-  1459  0363  cd0000            	call	_trigL2
-  1460  0366  2e03              	ld	l,0x03
-  1461  0368  cd0000            	call	_zx_border_fastcall
-  1462  036b  2150b4            	ld	hl,0xb450
-  1463  036e  220700            	ld	(_p0),hl
-  1464  0371  219678            	ld	hl,0x7896
-  1465  0374  220900            	ld	(_p1),hl
-  1466  0377  215a3c            	ld	hl,0x3c5a
-  1467  037a  220b00            	ld	(_p2),hl
-  1468  037d  3e03              	ld	a,0x03
-  1469  037f  210c00            	ld	hl,_p2 + 1
-  1470  0382  f5                	push	af
-  1471  0383  33                	inc	sp
-  1472  0384  46                	ld	b, (hl)
-  1473  0385  2b                	dec	hl
-  1474  0386  4e                	ld	c, (hl)
-  1475  0387  2a0900            	ld	hl,(_p1)
-  1476  038a  c5                	push	bc
-  1477  038b  e5                	push	hl
-  1478  038c  2a0700            	ld	hl,(_p0)
-  1479  038f  e5                	push	hl
-  1480  0390  cd0000            	call	_trigL2
-  1481  0393  2e01              	ld	l,0x01
-  1482  0395  cd0000            	call	_zx_border_fastcall
-  1483  0398  3e38              	ld	a,0x38
-  1484  039a  f5                	push	af
-  1485  039b  33                	inc	sp
-  1486  039c  2a0b00            	ld	hl,(_p2)
-  1487  039f  e5                	push	hl
-  1488  03a0  2a0900            	ld	hl,(_p1)
-  1489  03a3  e5                	push	hl
-  1490  03a4  2a0700            	ld	hl,(_p0)
-  1491  03a7  e5                	push	hl
-  1492  03a8  cd0000            	call	_fillTrigL2
-  1493  03ab  2e02              	ld	l,0x02
-  1494  03ad  cd0000            	call	_zx_border_fastcall
-  1495  03b0  3a0800            	ld	a,(_p0 + 1)
-  1496  03b3  210700            	ld	hl,_p0
-  1497  03b6  46                	ld	b, (hl)
-  1498  03b7  2600              	ld	h,0x00
-  1499  03b9  e5                	push	hl
-  1500  03ba  33                	inc	sp
-  1501  03bb  48                	ld	c,b
-  1502  03bc  47                	ld	b,a
-  1503  03bd  c5                	push	bc
-  1504  03be  cd0000            	call	_PlotPixel8K
-  1505  03c1  3a0a00            	ld	a,(_p1 + 1)
-  1506  03c4  210900            	ld	hl,_p1
-  1507  03c7  46                	ld	b, (hl)
-  1508  03c8  2600              	ld	h,0x00
-  1509  03ca  e5                	push	hl
-  1510  03cb  33                	inc	sp
-  1511  03cc  48                	ld	c,b
-  1512  03cd  47                	ld	b,a
-  1513  03ce  c5                	push	bc
-  1514  03cf  cd0000            	call	_PlotPixel8K
-  1515  03d2  3a0c00            	ld	a,(_p2 + 1)
-  1516  03d5  210b00            	ld	hl,_p2
-  1517  03d8  46                	ld	b, (hl)
-  1518  03d9  2600              	ld	h,0x00
-  1519  03db  e5                	push	hl
-  1520  03dc  33                	inc	sp
-  1521  03dd  48                	ld	c,b
-  1522  03de  47                	ld	b,a
-  1523  03df  c5                	push	bc
-  1524  03e0  cd0000            	call	_PlotPixel8K
-  1525                          l_main_00102:
-  1526  03e3  18fe              	jr	l_main_00102
-  1527                          	SECTION data_compiler
-  1528                          _x:
-  1529  0000  00                	DEFB +0x00
-  1530                          _y:
-  1531  0001  00                	DEFB +0x00
-  1532                          _colour:
-  1533  0002  0f                	DEFB +0x0f
-  1534                          _x1:
-  1535  0003  14                	DEFB +0x14
-  1536                          _y1:
-  1537  0004  0a                	DEFB +0x0a
-  1538                          _x2:
-  1539  0005  5a                	DEFB +0x5a
-  1540                          _y2:
-  1541  0006  50                	DEFB +0x50
-  1542                          _p0:
-  1543  0007  64                	DEFB +0x64
-  1544  0008  0a                	DEFB +0x0a
-  1545                          _p1:
-  1546  0009  96                	DEFB +0x96
-  1547  000a  78                	DEFB +0x78
-  1548                          _p2:
-  1549  000b  aa                	DEFB +0xaa
-  1550  000c  3c                	DEFB +0x3c
-  1551                          _swap:
-  1552  000d  00                	DEFB +0x00
-  1553  000e  00                	DEFB +0x00
-  1554                          	SECTION IGNORE
-  1555                          
+  1400  02f8  2150b4            	ld	hl,0xb450
+  1401  02fb  220700            	ld	(_p0),hl
+  1402  02fe  21be78            	ld	hl,0x78be
+  1403  0301  220900            	ld	(_p1),hl
+  1404  0304  215a3c            	ld	hl,0x3c5a
+  1405  0307  220b00            	ld	(_p2),hl
+  1406  030a  3e03              	ld	a,0x03
+  1407  030c  210c00            	ld	hl,_p2 + 1
+  1408  030f  f5                	push	af
+  1409  0310  33                	inc	sp
+  1410  0311  46                	ld	b, (hl)
+  1411  0312  2b                	dec	hl
+  1412  0313  4e                	ld	c, (hl)
+  1413  0314  2a0900            	ld	hl,(_p1)
+  1414  0317  c5                	push	bc
+  1415  0318  e5                	push	hl
+  1416  0319  2a0700            	ld	hl,(_p0)
+  1417  031c  e5                	push	hl
+  1418  031d  cd0000            	call	_trigL2
+  1419  0320  2e01              	ld	l,0x01
+  1420  0322  cd0000            	call	_zx_border_fastcall
+  1421  0325  3e38              	ld	a,0x38
+  1422  0327  f5                	push	af
+  1423  0328  33                	inc	sp
+  1424  0329  2a0b00            	ld	hl,(_p2)
+  1425  032c  e5                	push	hl
+  1426  032d  2a0900            	ld	hl,(_p1)
+  1427  0330  e5                	push	hl
+  1428  0331  2a0700            	ld	hl,(_p0)
+  1429  0334  e5                	push	hl
+  1430  0335  cd0000            	call	_fillTrigL2
+  1431  0338  2e02              	ld	l,0x02
+  1432  033a  cd0000            	call	_zx_border_fastcall
+  1433  033d  3a0800            	ld	a,(_p0 + 1)
+  1434  0340  210700            	ld	hl,_p0
+  1435  0343  46                	ld	b, (hl)
+  1436  0344  2600              	ld	h,0x00
+  1437  0346  e5                	push	hl
+  1438  0347  33                	inc	sp
+  1439  0348  48                	ld	c,b
+  1440  0349  47                	ld	b,a
+  1441  034a  c5                	push	bc
+  1442  034b  cd0000            	call	_PlotPixel8K
+  1443  034e  3a0a00            	ld	a,(_p1 + 1)
+  1444  0351  210900            	ld	hl,_p1
+  1445  0354  46                	ld	b, (hl)
+  1446  0355  2600              	ld	h,0x00
+  1447  0357  e5                	push	hl
+  1448  0358  33                	inc	sp
+  1449  0359  48                	ld	c,b
+  1450  035a  47                	ld	b,a
+  1451  035b  c5                	push	bc
+  1452  035c  cd0000            	call	_PlotPixel8K
+  1453  035f  3a0c00            	ld	a,(_p2 + 1)
+  1454  0362  210b00            	ld	hl,_p2
+  1455  0365  46                	ld	b, (hl)
+  1456  0366  2600              	ld	h,0x00
+  1457  0368  e5                	push	hl
+  1458  0369  33                	inc	sp
+  1459  036a  48                	ld	c,b
+  1460  036b  47                	ld	b,a
+  1461  036c  c5                	push	bc
+  1462  036d  cd0000            	call	_PlotPixel8K
+  1463                          l_main_00102:
+  1464  0370  18fe              	jr	l_main_00102
+  1465                          	SECTION data_compiler
+  1466                          _x:
+  1467  0000  00                	DEFB +0x00
+  1468                          _y:
+  1469  0001  00                	DEFB +0x00
+  1470                          _colour:
+  1471  0002  0f                	DEFB +0x0f
+  1472                          _x1:
+  1473  0003  14                	DEFB +0x14
+  1474                          _y1:
+  1475  0004  0a                	DEFB +0x0a
+  1476                          _x2:
+  1477  0005  5a                	DEFB +0x5a
+  1478                          _y2:
+  1479  0006  50                	DEFB +0x50
+  1480                          _p0:
+  1481  0007  64                	DEFB +0x64
+  1482  0008  0a                	DEFB +0x0a
+  1483                          _p1:
+  1484  0009  96                	DEFB +0x96
+  1485  000a  78                	DEFB +0x78
+  1486                          _p2:
+  1487  000b  aa                	DEFB +0xaa
+  1488  000c  3c                	DEFB +0x3c
+  1489                          _swap:
+  1490  000d  00                	DEFB +0x00
+  1491  000e  00                	DEFB +0x00
+  1492                          	SECTION IGNORE
+  1493                          
