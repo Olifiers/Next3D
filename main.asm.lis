@@ -1,4 +1,4 @@
-C:/Users/NTHunter/AppData/Local/Temp/zcc00005F981AE92.asm:
+C:/Users/NTHunter/AppData/Local/Temp/zcc00005968051E2.asm:
      1                          MODULE main_asm
      2                          LINE 0, "main.asm"
 main.asm:
@@ -27,287 +27,576 @@ main.asm:
      7  0003  00                EXTERN  _y2:        db  0
      8  0004  00                EXTERN  _colour:    db  0
      9                          
-    10                          
-    11                          ; extern void stop(void)
-    12                          PUBLIC _stop
-    13                          _stop:
-    14                          
-    15  0005  c30500                jp _stop
-    16                          
-    17                          
-    18                          ; extern void setCPU(void)
-    19                          PUBLIC _setCPU
-    20                          _setCPU:
-    21                          
-    22                              ;;NEXTREG 03h,%00110011 ; Set machine to Spectrum Next
-    23  0008  ed910703              NEXTREG 07h,3           ; Set CPU to 28MHz
-    24  000c  c9                    RET
-    25                          
-    26                          
-    27                          ; void initL2(void)
-    28                          PUBLIC _initL2
-    29                          _initL2:
-    30                          
-    31                              ; Enable Layer 2
-    32  000d  013b12                LD BC, 0x123B
-    33  0010  3e02                  LD A, 2
-    34  0012  ed79                  OUT (C), A
+    10                          ; ===========================================================================================
+    11                              ; Perenial definitions for trigFillL2 (routine to draw filled triangles)
+    12                              ; Triangle line p0-p2
+    13  0005  00                    Tri_ac_r0: defs 1   ; x
+    14  0006  00                    Tri_ac_r1: defs 1   ; Width/deltax
+    15  0007  00                    Tri_ac_r2: defs 1   ; Height/deltay
+    16  0008  00                    Tri_ac_r3: defs 1   ; Error Bresenhams
+    17  0009  00                    Tri_ac_r4: defs 1   ; Quadrant... Direction... Bit? 0 or 1 -- Flags
+    18                              ; Triangle line p0-p1
+    19  000a  00                    Tri_ab_r0: defs 1   ; x
+    20  000b  00                    Tri_ab_r1: defs 1   ; Width/deltax
+    21  000c  00                    Tri_ab_r2: defs 1   ; Height/deltay
+    22  000d  00                    Tri_ab_r3: defs 1   ; Error Bresenhams
+    23  000e  00                    Tri_ab_r4: defs 1   ; Quadrant... Direction... Bit? 0 or 1 -- Flags
+    24                              ; Triangle point coordinates
+    25  000f  0000                  p0: defs 2          ; p0.y and p0.x
+    26  0011  0000                  p1: defs 2          ; p1.y and p1.x
+    27  0013  0000                  p2: defs 2          ; p2.y and p2.x
+    28                          
+    29                          
+    30                          ; extern void stop(void)
+    31                          ; A debugging tool. Jump here (jp _stop) from your code so you can stop and inspect registers etc.
+    32                          ; ============================================================================================
+    33                          PUBLIC _stop
+    34                          _stop:
     35                          
-    36                              ; Setup starting Layer2 16K bank
-    37  0014  ed911209              NEXTREG 12h, 9
-    38  0018  c9                    RET
-    39                          
-    40                          
-    41                          ; void clearL2(unsigned char colour) __z88dk_fastcall
-    42                          ; param is in L if it's 8-bit, HL if it's 16-bit, DEHL if it's 32-bit.
-    43                          PUBLIC _clearL2
-    44                          _clearL2:
-    45                          
-    46  0019  1600                  LD D, 0             ; D=Y, start at top of the screen
-    47                          
-    48                          nextY:
-    49                              ;Calculate bank number and swap it in
-    50  001b  7a                    LD A, D             ; Copy current Y to A
-    51  001c  e6e0                  AND %11100000       ; 32100000 (3MSB = bank number)
-    52  001e  07                    RLCA                ; 21000003
-    53  001f  07                    RLCA                ; 10000032
-    54  0020  07                    RLCA                ; 00000321
-    55  0021  c612                  ADD A, START_8K_BANK    ; A=bank number to swap in
-    56  0023  ed9256                NEXTREG 56h, A      ; Swap bank
-    57                          
-    58                              ; Convert DE (yx) to screen memory location starting at $C000
-    59  0026  d5                    PUSH DE             ; (DE) will be changed to bank offset
-    60  0027  7a                    LD A, D             ; Copy current Y to A
-    61  0028  e61f                  AND %00011111       ; Discard bank number
-    62  002a  f6c0                  OR 0xC0             ; Screen starts at $C000
-    63  002c  57                    LD D, A             ; D=high byte for $C000 screen memory
+    36  0015  c31500                jp _stop
+    37                          
+    38                          
+    39                          ; extern void setCPU(void)
+    40                          ; Sets the Next CPU to maximum speed, 28MHz
+    41                          ; ===========================================================================================
+    42                          PUBLIC _setCPU
+    43                          _setCPU:
+    44                          
+    45                              ;;NEXTREG 03h,%00110011 ; Set machine to Spectrum Next
+    46  0018  ed910700              NEXTREG 07h,0           ; Set CPU to 28MHz (CURRENTLY SET TO 0 FOR DEBUG!!!)
+    47  001c  c9                    RET
+    48                          
+    49                          
+    50                          ; void initL2(void)
+    51                          ; Initialises the Layer 2 Next screen mode into 256x192 256 colours in front of the ULA screen
+    52                          ; ============================================================================================
+    53                          PUBLIC _initL2
+    54                          _initL2:
+    55                          
+    56                              ; Enable Layer 2
+    57  001d  013b12                LD BC, 0x123B
+    58  0020  3e02                  LD A, 2
+    59  0022  ed79                  OUT (C), A
+    60                          
+    61                              ; Setup starting Layer2 16K bank
+    62  0024  ed911209              NEXTREG 12h, 9
+    63  0028  c9                    RET
     64                          
-    65                              ; Loop X through 0..255, we dont have to deal with bank swapping
-    66                              ; here because it only occurs when changing Y
-    67  002d  1e00                  LD E, 0             ; X=0 (X is E, Y is D)
-    68                          
-    69                          nextX:
-    70  002f  7d                    LD A, L             ; A=current X
-    71  0030  12                    LD (DE), A          ; Use L as colour. Variable is passed via DEHL - L if its 8-bit, HL if its 16-bit, DEHL if its 32-bit.
-    72  0031  7b                    LD A, E             ; A=current X
-    73  0032  1c                    INC E               ; Increment to next X
-    74  0033  20fa                  JR NZ, nextX        ; Loop to nextX until E rolls over
-    75                          
-    76                              ; Continue with next line or exit
-    77  0035  d1                    POP DE              ; Restore DE to coordinates
-    78  0036  14                    INC D               ; Increment to next Y
-    79  0037  7a                    LD A, D             ; A=current Y
-    80  0038  fec0                  CP 192              ; Did we just complete last line?
-    81  003a  da1b00                JP C, nextY         ; No, continue with next line
-    82  003d  c9                    RET
-    83                          
+    65                          
+    66                          ; void clearL2(unsigned char colour) __z88dk_fastcall
+    67                          ; param is in L if it's 8-bit, HL if it's 16-bit, DEHL if it's 32-bit.
+    68                          ; A terrible screen cleaning routine we'll have to optmise the hell out of soon!
+    69                          ; =============================================================================================
+    70                          PUBLIC _clearL2
+    71                          _clearL2:
+    72                          
+    73  0029  1600                  LD D, 0             ; D=Y, start at top of the screen
+    74                          
+    75                          nextY:
+    76                              ;Calculate bank number and swap it in
+    77  002b  7a                    LD A, D             ; Copy current Y to A
+    78  002c  e6e0                  AND %11100000       ; 32100000 (3MSB = bank number)
+    79  002e  07                    RLCA                ; 21000003
+    80  002f  07                    RLCA                ; 10000032
+    81  0030  07                    RLCA                ; 00000321
+    82  0031  c612                  ADD A, START_8K_BANK    ; A=bank number to swap in
+    83  0033  ed9256                NEXTREG 56h, A      ; Swap bank
     84                          
-    85                          ; extern void PlotPixel8K(uint8_t xcoord, uint8_t ycoord, uint8_t colour) __z88dk_callee
-    86                          PUBLIC _PlotPixel8K, PlotPixel8K
-    87                          _PlotPixel8K:
-    88                          
-    89                              ;jp _PlotPixel8K
-    90  003e  e1                   	pop hl          ; Loads the stack value (sp) into hl for restoring later and moves variables into top of stack
-    91  003f  d1                   	pop de          ; Loads next stack entry into e = x, d = y
-    92  0040  3b                   	dec sp          ; Moves the stack up 1 byte, discarding a value and getting us to the third param, colour
-    93  0041  e3                   	ex (sp), hl     ; Restores the original value of the stack from hl, and puts the colour on h from the stack
-    94  0042  eb                   	ex de, hl       ; Put y and x into hl and the colour into d
-    95  0043  fd6a                  ld iyl, d       ; Puts colour into iyl in order to free d for the drawline
-    96                          
-    97                          PlotPixel8K:
-    98                          ;===========================================================================
-    99                          ;	HL = YX, IYL = colour -- IMPORTANT: DESTROYS H (and A)
-   100                          ;===========================================================================
-   101                          
-   102  0045  7c                	ld a, h 				    ; 0-31 per bank (8k)
-   103  0046  e6e0              	and %11100000			    ; 3 bits for the 8 banks we can use
-   104  0048  ed23              	swapnib
-   105  004a  0f                	rrca
-   106  004b  c612              	add a, START_8K_BANK		; 8L bank for L2
-   107  004d  ed9250            	nextreg MMU_REGISTER_0,a  	; Set bank to write into
-   108  0050  7c                	ld a, h
-   109  0051  e61f              	and %00011111 		        ; This is our y (0-31)
-   110  0053  67                	ld h, a 				    ; Puts y it back in h
-   111  0054  fd7d                  ld a, iyl                   ; Loads colour from iyl into a
-   112  0056  77                	ld (hl), a			        ; Draw our pixel
-   113  0057  c9                	ret
-   114                          
-   115                          
-   116                          PlotPixel8KCol:
-   117                          ;===========================================================================
-   118                          ; This has no C calls and must be called from assembly
-   119                          ;
-   120                          ;	HL = YX -- IMPORTANT: DESTROYS H (and A)
-   121                          ; We preset the colour so we can use it directly
-   122                          ; by setting plotPixel8KColour with self-modifying code
-   123                          ;===========================================================================
-   124                          
-   125  0058  7c                	ld a, h 				    ; 0-31 per bank (8k)
-   126  0059  e6e0              	and %11100000			    ; 3 bits for the 8 banks we can use
-   127  005b  ed23              	swapnib
-   128  005d  0f                	rrca
-   129  005e  c612              	add a, START_8K_BANK		; 8L bank for L2
-   130  0060  ed9250            	nextreg MMU_REGISTER_0,a  	; Set bank to write into
-   131  0063  7c                	ld a, h
-   132  0064  e61f              	and %00011111 		        ; This is our y (0-31)
-   133  0066  67                	ld h, a 				    ; Puts y it back in h
-   134                          plotPixel8KColour:
-   135  0067  3600                  ld (hl), 0			        ; Draw our pixel (colour is going to be set by automodifying the code)
-   136  0069  c9                	ret
-   137                          
-   138                          
-   139                          ; extern void drawL2(uint8_t x1coord, uint8_t y1coord, uint8_t x2coord, uint8_t y2coord, uint8_t colour) __z88dk_callee
-   140                          PUBLIC _drawL2, drawL2
-   141                          _drawL2:
-   142                          
-   143                          ; or, even better, set the colour in AF, and store that in the PlotPixel8KCol
-   144  006a  c1                    pop bc          ; Loads the stack value (sp) into bc for restoring later and moves variables into top of stack
-   145  006b  e1                    pop hl          ; Loads y1x1 into hl
-   146  006c  d1                    pop de          ; Loads y2x2 into de
-   147  006d  fde1                  pop iy          ; Use iyl for the colour
-   148  006f  c5                    push bc         ; Restores the stack value from bc
-   149                          
-   150                          drawL2:
-   151                          ;=========================================================================
-   152                          ;   HL = Y1X1, DE = Y2X2, IYL = colour
-   153                          ;=========================================================================
-   154  0070  fd7d                  ld a, iyl           ; Loads colour into a
-   155  0072  326800                ld (plotPixel8KColour + 1), a ; Store the colour in the plotPixel8KColour through self-modifying the code
-   156  0075  7a                    ld a, d             ; Loads y2 into a. We'll see if we need to swap coords to draw downwards
-   157  0076  bc                    cp h                ; Compares y1 with y2
-   158  0077  3001                  jr nc, draw_line_1  ; No need to swap the coords, jump
-   159  0079  eb                    ex de, hl           ; Swapped coordinates to ensure y2 > y1, so we draw downwards
-   160                          draw_line_1:
-   161  007a  7a                    ld a, d             ; Loads y2 into a
-   162  007b  94                    sub h               ; y2 - y1
-   163  007c  47                    ld b, a             ; b becomes deltay
-   164  007d  7b                    ld a, e             ; Loads x2 into a
-   165  007e  95                    sub l               ; x2 - x1, a now contains deltax
-   166  007f  3805                  jr c, draw_line_x1  ; If carry is set (x2 - x1 is negative) we are drawing right to left
-   167  0081  4f                    ld c, a             ; c becomes deltax
-   168  0082  3e2c                  ld a, 0x2C          ; Replaces original code above to increase x1 as we're drawing left to right. 0x2C is inc l, and we modify the code to have this
-   169  0084  1805                  jr draw_line_x2     ; Skips next part of the code
-   170                          draw_line_x1:
-   171  0086  ed44                  neg                 ; deltax in a is negative, make it positive
-   172  0088  4f                    ld c, a             ; c becomes deltax
-   173  0089  3e2d                  ld a, 0x2D          ; Replaces original code above to decrease x1 as we're drawing right to left. Self-modifying, puts dec l into the code
-   174                          draw_line_x2:
-   175  008b  32b100                ld (draw_line_q1_m2), a ; a contains either inc l or dec l, and modifies the code accordingly
-   176  008e  32c800                ld (draw_line_q2_m2), a ; Same as above for verticalish lines
-   177  0091  78                    ld a, b             ; We'll check if deltay (b) and deltax (ixl) are 0
-   178  0092  b1                    or c                ; Checking...
-   179  0093  ca5800                jp z, PlotPixel8KCol    ; When reaching zero, we're done, draw last pixel
-   180                              ; STATUS: b = deltay | c = deltax | d is free
-   181                          draw_line_q:            ; Find out what kind of diagonal we're dealing with, if horizontalish or verticalish
-   182  0096  78                    ld a, b             ; Loads deltay into a
-   183  0097  b9                    cp c                ; Compares with deltax
-   184  0098  301d                  jr nc, draw_line_q2 ; If no cary, line is verticalish (or perfectly diagonal)
-   185                          draw_line_q1:
-   186  009a  79                    ld a, c             ; a becomes deltax
-   187  009b  32ae00                ld (draw_line_q1_m1 + 1), a ; Self-modifying code: loads deltax onto the value of the opcode, in this case the loop
-   188  009e  48                    ld c, b             ; c becomes deltay
-   189  009f  47                    ld b, a             ; b becomes deltax for the loop counter
-   190  00a0  58                    ld e, b             ; e becomes deltax temporarily...
-   191  00a1  cb3b                  srl e               ; now e = deltax / 2 -- aka Bresenham's error
-   192                          ; loop uses d as temp, hl bc e
-   193                          draw_line_q1_l:
-   194  00a3  54                    ld d, h             ; OPTIMISE? Backs up h into d
-   195  00a4  cd5800                call PlotPixel8KCol ; PlotPixel8KCol destroys h, so we need to preserve it
-   196  00a7  62                    ld h, d             ; OPTIMISE? Restores h from d
-   197  00a8  7b                    ld a, e             ; Loads Bresenham's error into a
-   198  00a9  91                    sub c               ; error - deltay
-   199  00aa  5f                    ld e, a             ; Stores new error value into e
-   200  00ab  3004                  jr nc, draw_line_q1_m2  ; If there's no cary, jump
-   201                          draw_line_q1_m1:
-   202  00ad  c600                  add a, 0            ; This 0 here will be modified by the self-modifying code above e = e + deltax
-   203  00af  5f                    ld e, a             ; Stores new error e = e + deltax back into e
-   204  00b0  24                    inc h               ; Increases line slope by adding to y1
-   205                          draw_line_q1_m2:        ; This either increases or decreases l by the self modified code that targeted this
-   206  00b1  2c                    inc l               ; Self-modified code: It will be either inc l or dec l depending on direction of horizontal drawing
-   207                          draw_line_q1_s:         ; Tests to loop and keep drawing line
-   208  00b2  10ef                  djnz draw_line_q1_l ; Loops until line is drawn and zero flag set
-   209  00b4  c35800                jp PlotPixel8KCol    ; This is the last pixel, draws and quits
-   210                          draw_line_q2:           ; Here the line is verticalish or perfectly diagonal
-   211  00b7  32c700                ld (draw_line_q2_m1 + 1), a ; Self-modifies the code to store deltay in the loop
-   212  00ba  58                    ld e, b             ; e = deltay
-   213  00bb  cb3b                  srl e               ; e = deltay / 2 (Bressenham's error)
-   214                          ; loop uses d as temp, hl bc e
-   215                          draw_line_q2_l:         ; The main drawline loop for this case
-   216  00bd  54                    ld d, h             ; OPTIMISE? Backs up h into d
-   217  00be  cd5800                call PlotPixel8KCol    ; PlotPixel8KCol destroys h, so we need to preserve it
-   218  00c1  62                    ld h, d             ; OPTIMISE? Restores h from d
-   219  00c2  7b                    ld a, e             ; Adds deltax to the error
-   220  00c3  91                    sub c               ; As above
-   221  00c4  3003                  jr nc, draw_line_q2_s   ; If we don't get a carry, skip the next part
-   222                          draw_line_q2_m1:
-   223  00c6  c600                  add a, 0            ; This is a target of self-modified code: e = e + deltax
-   224                          draw_line_q2_m2:
-   225  00c8  2c                    inc l               ; Self-modified code: It will be either inc l or dec l depending on direction of horizontal drawing
-   226                          draw_line_q2_s:
-   227  00c9  5f                    ld e, a             ; Restores the error value back in
-   228  00ca  24                    inc h               ; Increases y1
-   229  00cb  10f0                  djnz draw_line_q2_l ; While zero flag not set, loop back to main loop
-   230  00cd  c35800                jp PlotPixel8KCol   ; This is the last pixel drawn, all done
-   231                          
-   232                          
-   233                          PUBLIC _trigL2, trigL2
-   234                          _trigL2:
-   235  00d0  fde1                  pop iy              ; Pops sp into iy
-   236  00d2  e1                    pop hl              ; Pops p0.y and p0.x into hl
-   237                              ;ld (l1 + 1), hl     ; Self-modifying code, loads hl into l1: hl (l1 start)
-   238  00d3  22f900                ld (l3 + 4), hl     ; Self-modifying code, loads hl into l3: de (l3 end)
-   239  00d6  d1                    pop de              ; Pops p1.y and p1.x into de
-   240                              ;ld (l1 + 4), de     ; Self-modifying code, loads de into l1: de (l1 end)
-   241  00d7  ed53ed00              ld (l2 + 1), de     ; Self-modifying code, loads de into l2: hl (l2 start)
-   242  00db  c1                    pop bc              ; Pops p2.y and p2.x into bc
-   243  00dc  ed43f000              ld (l2 + 4), bc     ; Self-modifying code, loads bc into l2: de (l2 end)
-   244  00e0  ed43f600              ld (l3 + 1), bc     ; Self-modifying code, loads cd into l3: hl (l3 start)
-   245  00e4  c1                    pop bc              ; Pops colour value into c
-   246  00e5  fde5                  push iy             ; Restore stack
-   247  00e7  fd69                  ld iyl, c           ; Loads colour into iyl
-   248                          
-   249                          trigL2:
-   250                          l1:                     ; Line 1
-   251  00e9  cd7000                call drawL2         ; Because hl and de are already set correctly, just draw it
-   252                          l2:                     ; Line 2
-   253  00ec  210000                ld hl, 0            ; Self-modified target from above
-   254  00ef  110000                ld de, 0            ; Seld-modified target from above
-   255  00f2  cd7000                call drawL2         ; Draws line with the modified hl and de with the self-modifying code
-   256                          l3:                     ; Line 3
-   257  00f5  210000                ld hl, 0            ; Self-modified target from above
-   258  00f8  110000                ld de, 0            ; Self-modified target from above
-   259  00fb  c37000                jp drawL2           ; Draws line with the modified hl and de with the self-modifying code
-   260  00fe  c9                    ret                 ; We're done, return nicely
-   261                          
-   262                          
-   263                          ;PUBLIC _trigL2, trigL2
-   264                          ;_trigL2:
-   265                          ;    pop iy              ; Pops sp into iy
-   266                          ;    pop hl              ; Pops p0.y and p0.x into hl
-   267                          ;    ld (iy + 02h), l    ; Loads p0.x into iy + 2
-   268                          ;    ld (iy + 03h), h    ; Loads p0.y into iy + 3
-   269                          ;    pop de              ; Pops p1.y and p1.x into de
-   270                          ;    ld (iy + 04h), e    ; Loads p1.x into iy + 4
-   271                          ;    ld (iy + 05h), d    ; Loads p1.y into iy + 5
-   272                          ;    pop bc              ; Pops p2.y and p2.x into bc
-   273                          ;    ld (iy + 06h), c    ; Loads p2.x into iy + 6
-   274                          ;    ld (iy + 07h), b    ; Loads p2.y into iy + 7
-   275                          ;    pop bc              ; Pops colour into c
-   276                          ;    ld ixl, c           ; Loads colour into ixl
-   277                          ;
-   278                          ;trigL2:
-   279                          ;    call drawL2         ; hl and de already have p0.y, p0,x, p1,y and p1,x
-   280                          ;    ld l, (iy + 04h)
-   281                          ;    ld h, (iy + 05h)
-   282                          ;    ld e, (iy + 06h)
-   283                          ;    ld d, (iy + 07h)
-   284                          ;    call drawL2
-   285                          ;    ld l, (iy + 06h)
-   286                          ;    ld h, (iy + 07h)
-   287                          ;    ld e, (iy + 02h)
-   288                          ;    ld d, (iy + 03h)
-   289                          ;    call drawL2
-   290                          ;    ld a, 255
-   291                          ;    push iy
-   292                          ;    ret
-   293                          
+    85                              ; Convert DE (yx) to screen memory location starting at $C000
+    86  0036  d5                    PUSH DE             ; (DE) will be changed to bank offset
+    87  0037  7a                    LD A, D             ; Copy current Y to A
+    88  0038  e61f                  AND %00011111       ; Discard bank number
+    89  003a  f6c0                  OR 0xC0             ; Screen starts at $C000
+    90  003c  57                    LD D, A             ; D=high byte for $C000 screen memory
+    91                          
+    92                              ; Loop X through 0..255, we dont have to deal with bank swapping
+    93                              ; here because it only occurs when changing Y
+    94  003d  1e00                  LD E, 0             ; X=0 (X is E, Y is D)
+    95                          
+    96                          nextX:
+    97  003f  7d                    LD A, L             ; A=current X
+    98  0040  12                    LD (DE), A          ; Use L as colour. Variable is passed via DEHL - L if its 8-bit, HL if its 16-bit, DEHL if its 32-bit.
+    99  0041  7b                    LD A, E             ; A=current X
+   100  0042  1c                    INC E               ; Increment to next X
+   101  0043  20fa                  JR NZ, nextX        ; Loop to nextX until E rolls over
+   102                          
+   103                              ; Continue with next line or exit
+   104  0045  d1                    POP DE              ; Restore DE to coordinates
+   105  0046  14                    INC D               ; Increment to next Y
+   106  0047  7a                    LD A, D             ; A=current Y
+   107  0048  fec0                  CP 192              ; Did we just complete last line?
+   108  004a  da2b00                JP C, nextY         ; No, continue with next line
+   109  004d  c9                    RET
+   110                          
+   111                          
+   112                          ; extern void PlotPixel8K(uint8_t xcoord, uint8_t ycoord, uint8_t colour) __z88dk_callee
+   113                          ; Generic plotting routine that can be called from C
+   114                          ; ========================================================================================
+   115                          PUBLIC _PlotPixel8K, PlotPixel8K
+   116                          _PlotPixel8K:
+   117                          
+   118                              ;jp _PlotPixel8K
+   119  004e  e1                   	pop hl          ; Loads the stack value (sp) into hl for restoring later and moves variables into top of stack
+   120  004f  d1                   	pop de          ; Loads next stack entry into e = x, d = y
+   121  0050  3b                   	dec sp          ; Moves the stack up 1 byte, discarding a value and getting us to the third param, colour
+   122  0051  e3                   	ex (sp), hl     ; Restores the original value of the stack from hl, and puts the colour on h from the stack
+   123  0052  eb                   	ex de, hl       ; Put y and x into hl and the colour into d
+   124  0053  fd6a                  ld iyl, d       ; Puts colour into iyl in order to free d for the drawline
+   125                          
+   126                          
+   127                          PlotPixel8K:
+   128                          ;===========================================================================
+   129                          ;	HL = YX, IYL = colour -- IMPORTANT: DESTROYS H (and A)
+   130                          ;===========================================================================
+   131                          
+   132  0055  7c                	ld a, h 				    ; 0-31 per bank (8k)
+   133  0056  e6e0              	and %11100000			    ; 3 bits for the 8 banks we can use
+   134  0058  ed23              	swapnib
+   135  005a  0f                	rrca
+   136  005b  c612              	add a, START_8K_BANK		; 8L bank for L2
+   137  005d  ed9250            	nextreg MMU_REGISTER_0,a  	; Set bank to write into
+   138  0060  7c                	ld a, h
+   139  0061  e61f              	and %00011111 		        ; This is our y (0-31)
+   140  0063  67                	ld h, a 				    ; Puts y it back in h
+   141  0064  fd7d                  ld a, iyl                   ; Loads colour from iyl into a
+   142  0066  77                	ld (hl), a			        ; Draw our pixel
+   143                              ; TEMP: SLOW DOWN FOR DEBUG
+   144  0067  3eff                  ld a, 255
+   145                              ;ld e, 255
+   146                          loopy:
+   147  0069  00                    nop
+   148  006a  00                    nop
+   149  006b  00                    nop
+   150  006c  00                    nop
+   151  006d  00                    nop
+   152                              ;dec e
+   153                              ;jr nz, loopy
+   154  006e  3d                    dec a
+   155  006f  20f8                  jr nz, loopy
+   156  0071  c9                	ret
+   157                          
+   158                          
+   159                          PlotPixel8KCol:
+   160                          ;===========================================================================
+   161                          ; This has no C calls and must be called from assembly!!!
+   162                          ;
+   163                          ;	HL = YX -- IMPORTANT: DESTROYS H (and A)
+   164                          ; We preset the colour so we can use it directly
+   165                          ; by setting plotPixel8KColour with self-modifying code
+   166                          ;===========================================================================
+   167                          
+   168  0072  7c                	ld a, h 				    ; 0-31 per bank (8k)
+   169  0073  e6e0              	and %11100000			    ; 3 bits for the 8 banks we can use
+   170  0075  ed23              	swapnib
+   171  0077  0f                	rrca
+   172  0078  c612              	add a, START_8K_BANK		; 8L bank for L2
+   173  007a  ed9250            	nextreg MMU_REGISTER_0,a  	; Set bank to write into
+   174  007d  7c                	ld a, h
+   175  007e  e61f              	and %00011111 		        ; This is our y (0-31)
+   176  0080  67                	ld h, a 				    ; Puts y it back in h
+   177                          plotPixel8KColour:
+   178  0081  3600                  ld (hl), 0			        ; Draw our pixel (colour is going to be set by automodifying the code)
+   179  0083  c9                	ret
+   180                          
+   181                          
+   182                          ; extern void drawL2(uint8_t x1coord, uint8_t y1coord, uint8_t x2coord, uint8_t y2coord, uint8_t colour) __z88dk_callee
+   183                          ; A Bresenham's line drawing catering for every type of line and direction, inspired by a bunch of Speccy algos online
+   184                          ; ====================================================================================================================
+   185                          ; Credits to Andy Dansby (https://github.com/andydansby/bresenham_torture_test/blob/main/bresenham_line3.asm)
+   186                          ; Credits to Dean Belfield (http://www.breakintoprogram.co.uk)
+   187                          ; Credits to Gabrield Gambetta's great book 'Computer Graphics From Scratch'
+   188                          ; Credits to Mike Flash Ware for helping optimise it!
+   189                          PUBLIC _drawL2, drawL2
+   190                          _drawL2:
+   191                          
+   192                          ; or, even better, set the colour in AF, and store that in the PlotPixel8KCol
+   193  0084  c1                    pop bc          ; Loads the stack value (sp) into bc for restoring later and moves variables into top of stack
+   194  0085  e1                    pop hl          ; Loads y1x1 into hl
+   195  0086  d1                    pop de          ; Loads y2x2 into de
+   196  0087  fde1                  pop iy          ; Use iyl for the colour
+   197  0089  c5                    push bc         ; Restores the stack value from bc
+   198                          
+   199                          drawL2:
+   200                          ;=========================================================================
+   201                          ;   HL = Y1X1, DE = Y2X2, IYL = colour
+   202                          ;=========================================================================
+   203  008a  fd7d                  ld a, iyl           ; Loads colour into a
+   204  008c  328200                ld (plotPixel8KColour + 1), a ; Store the colour in the plotPixel8KColour through self-modifying the code
+   205  008f  7a                    ld a, d             ; Loads y2 into a. We'll see if we need to swap coords to draw downwards
+   206  0090  bc                    cp h                ; Compares y1 with y2
+   207  0091  3001                  jr nc, draw_line_1  ; No need to swap the coords, jump
+   208  0093  eb                    ex de, hl           ; Swapped coordinates to ensure y2 > y1, so we draw downwards
+   209                          draw_line_1:
+   210  0094  7a                    ld a, d             ; Loads y2 into a
+   211  0095  94                    sub h               ; y2 - y1
+   212  0096  47                    ld b, a             ; b becomes deltay
+   213  0097  7b                    ld a, e             ; Loads x2 into a
+   214  0098  95                    sub l               ; x2 - x1, a now contains deltax
+   215  0099  3805                  jr c, draw_line_x1  ; If carry is set (x2 - x1 is negative) we are drawing right to left
+   216  009b  4f                    ld c, a             ; c becomes deltax
+   217  009c  3e2c                  ld a, 0x2C          ; Replaces original code above to increase x1 as we're drawing left to right. 0x2C is inc l, and we modify the code to have this
+   218  009e  1805                  jr draw_line_x2     ; Skips next part of the code
+   219                          draw_line_x1:
+   220  00a0  ed44                  neg                 ; deltax in a is negative, make it positive
+   221  00a2  4f                    ld c, a             ; c becomes deltax
+   222  00a3  3e2d                  ld a, 0x2D          ; Replaces original code above to decrease x1 as we're drawing right to left. Self-modifying, puts dec l into the code
+   223                          draw_line_x2:
+   224  00a5  32cb00                ld (draw_line_q1_m2), a ; a contains either inc l or dec l, and modifies the code accordingly
+   225  00a8  32e200                ld (draw_line_q2_m2), a ; Same as above for verticalish lines
+   226  00ab  78                    ld a, b             ; We'll check if deltay (b) and deltax (ixl) are 0
+   227  00ac  b1                    or c                ; Checking...
+   228  00ad  ca7200                jp z, PlotPixel8KCol    ; When reaching zero, we're done, draw last pixel
+   229                              ; STATUS: b = deltay | c = deltax | d is free
+   230                          draw_line_q:            ; Find out what kind of diagonal we're dealing with, if horizontalish or verticalish
+   231  00b0  78                    ld a, b             ; Loads deltay into a
+   232  00b1  b9                    cp c                ; Compares with deltax
+   233  00b2  301d                  jr nc, draw_line_q2 ; If no cary, line is verticalish (or perfectly diagonal)
+   234                          draw_line_q1:
+   235  00b4  79                    ld a, c             ; a becomes deltax
+   236  00b5  32c800                ld (draw_line_q1_m1 + 1), a ; Self-modifying code: loads deltax onto the value of the opcode, in this case the loop
+   237  00b8  48                    ld c, b             ; c becomes deltay
+   238  00b9  47                    ld b, a             ; b becomes deltax for the loop counter
+   239  00ba  58                    ld e, b             ; e becomes deltax temporarily...
+   240  00bb  cb3b                  srl e               ; now e = deltax / 2 -- aka Bresenham's error
+   241                          ; loop uses d as temp, hl bc e
+   242                          draw_line_q1_l:
+   243  00bd  54                    ld d, h             ; OPTIMISE? Backs up h into d
+   244  00be  cd7200                call PlotPixel8KCol ; PlotPixel8KCol destroys h, so we need to preserve it
+   245  00c1  62                    ld h, d             ; OPTIMISE? Restores h from d
+   246  00c2  7b                    ld a, e             ; Loads Bresenham's error into a
+   247  00c3  91                    sub c               ; error - deltay
+   248  00c4  5f                    ld e, a             ; Stores new error value into e
+   249  00c5  3004                  jr nc, draw_line_q1_m2  ; If there's no cary, jump
+   250                          draw_line_q1_m1:
+   251  00c7  c600                  add a, 0            ; This 0 here will be modified by the self-modifying code above e = e + deltax
+   252  00c9  5f                    ld e, a             ; Stores new error e = e + deltax back into e
+   253  00ca  24                    inc h               ; Increases line slope by adding to y1
+   254                          draw_line_q1_m2:        ; This either increases or decreases l by the self modified code that targeted this
+   255  00cb  2c                    inc l               ; Self-modified code: It will be either inc l or dec l depending on direction of horizontal drawing
+   256                          draw_line_q1_s:         ; Tests to loop and keep drawing line
+   257  00cc  10ef                  djnz draw_line_q1_l ; Loops until line is drawn and zero flag set
+   258  00ce  c37200                jp PlotPixel8KCol   ; This is the last pixel, draws and quits
+   259                          draw_line_q2:           ; Here the line is verticalish or perfectly diagonal
+   260  00d1  32e100                ld (draw_line_q2_m1 + 1), a ; Self-modifies the code to store deltay in the loop
+   261  00d4  58                    ld e, b             ; e = deltay
+   262  00d5  cb3b                  srl e               ; e = deltay / 2 (Bressenham's error)
+   263                          ; loop uses d as temp, hl bc e
+   264                          draw_line_q2_l:         ; The main drawline loop for this case
+   265  00d7  54                    ld d, h             ; OPTIMISE? Backs up h into d
+   266  00d8  cd7200                call PlotPixel8KCol ; PlotPixel8KCol destroys h, so we need to preserve it
+   267  00db  62                    ld h, d             ; OPTIMISE? Restores h from d
+   268  00dc  7b                    ld a, e             ; Adds deltax to the error
+   269  00dd  91                    sub c               ; As above
+   270  00de  3003                  jr nc, draw_line_q2_s   ; If we don't get a carry, skip the next part
+   271                          draw_line_q2_m1:
+   272  00e0  c600                  add a, 0            ; This is a target of self-modified code: e = e + deltax
+   273                          draw_line_q2_m2:
+   274  00e2  2c                    inc l               ; Self-modified code: It will be either inc l or dec l depending on direction of horizontal drawing
+   275                          draw_line_q2_s:
+   276  00e3  5f                    ld e, a             ; Restores the error value back in
+   277  00e4  24                    inc h               ; Increases y1
+   278  00e5  10f0                  djnz draw_line_q2_l ; While zero flag not set, loop back to main loop
+   279  00e7  c37200                jp PlotPixel8KCol   ; This is the last pixel drawn, all done
+   280                          
+   281                          
+   282                          ;extern void trigL2(Point pt0, Point pt1, Point pt2, uint8_t colour) __z88dk_callee;
+   283                          ; A triangle wireframe drawing routine, highly optimised (I hope!)
+   284                          ;=================================================================================================
+   285                          PUBLIC _trigL2, trigL2
+   286                          _trigL2:
+   287  00ea  fde1                  pop iy              ; Pops sp into iy
+   288  00ec  e1                    pop hl              ; Pops p0.y and p0.x into hl
+   289                              ;ld (l1 + 1), hl     ; Self-modifying code, loads hl into l1: hl (l1 start)
+   290  00ed  221301                ld (l3 + 4), hl     ; Self-modifying code, loads hl into l3: de (l3 end)
+   291  00f0  d1                    pop de              ; Pops p1.y and p1.x into de
+   292                              ;ld (l1 + 4), de     ; Self-modifying code, loads de into l1: de (l1 end)
+   293  00f1  ed530701              ld (l2 + 1), de     ; Self-modifying code, loads de into l2: hl (l2 start)
+   294  00f5  c1                    pop bc              ; Pops p2.y and p2.x into bc
+   295  00f6  ed430a01              ld (l2 + 4), bc     ; Self-modifying code, loads bc into l2: de (l2 end)
+   296  00fa  ed431001              ld (l3 + 1), bc     ; Self-modifying code, loads cd into l3: hl (l3 start)
+   297  00fe  c1                    pop bc              ; Pops colour value into c
+   298  00ff  fde5                  push iy             ; Restore stack
+   299  0101  fd69                  ld iyl, c           ; Loads colour into iyl
+   300                          
+   301                          trigL2:
+   302                          l1:                     ; Line 1
+   303  0103  cd8a00                call drawL2         ; Because hl and de are already set correctly, just draw it
+   304                          l2:                     ; Line 2
+   305  0106  210000                ld hl, 0            ; Self-modified target from above
+   306  0109  110000                ld de, 0            ; Seld-modified target from above
+   307  010c  cd8a00                call drawL2         ; Draws line with the modified hl and de with the self-modifying code
+   308                          l3:                     ; Line 3
+   309  010f  210000                ld hl, 0            ; Self-modified target from above
+   310  0112  110000                ld de, 0            ; Self-modified target from above
+   311  0115  c38a00                jp drawL2           ; Draws line with the modified hl and de with the self-modifying code
+   312  0118  c9                    ret                 ; We're done, return nicely
+   313                          
+   314                          
+   315                          ;extern void fillTrigL2(Point pt0, Point pt1, Point pt2, uint8_t colour) __z88dk_callee;
+   316                          ; A filled triangle drawing routine
+   317                          ;=================================================================================================
+   318                          PUBLIC _fillTrigL2, fillTrigL2
+   319                          _fillTrigL2:
+   320                              ;p0: Variable (mem address) to store p0
+   321                              ;p1: Variable (mem address) to store p1
+   322                              ;p2: Variable (mem address) to store p2
+   323                              ; End of definitions
+   324  0119  fde1                  pop iy              ; Pops sp into iy
+   325  011b  e1                    pop hl              ; Pops p0.y and p0.x into hl
+   326  011c  d1                    pop de              ; Pops p1.y and p1.x into de
+   327  011d  7a                    ld a, d             ; Loads p1.y into a
+   328  011e  bc                    cp h                ; Compares p1.y with p0.y
+   329  011f  3001                  jr nc, _seq1        ; If p1.y > p0.y, no need to swap, jump
+   330  0121  eb                    ex de, hl           ; Swap p0 and p1, de now has the largest y of the two
+   331                              ;jp _stop
+   332                          _seq1:                  ; Here we have p0.y < p1.y | h < d, now we need to check p2
+   333  0122  c1                    pop bc              ; Pops p2.y and p2.x into bc
+   334  0123  78                    ld a, b             ; Loads p2.y into a
+   335  0124  ba                    cp d                ; Compares p2.y with p1.y
+   336  0125  3009                  jr nc, _seq2        ; If p2.y > p1.y, and here we already have p1.y > p0.y, we are done and jump out
+   337  0127  c5                    push bc             ; If p2.y < p1.y we need to swap p2 with p1, so we push p2 into stack
+   338  0128  d5                    push de             ; Push p1 into stack
+   339  0129  c1                    pop bc              ; Pop p1 into bc, becoming the new p2 > p1 on y
+   340  012a  d1                    pop de              ; Pop p2 into de, becoming the new p1 < p2 on y
+   341  012b  7a                    ld a, d             ; Lastly, we need to compare the new p1 < p0, if not swap them
+   342  012c  bc                    cp h                ; Compares the new p1.y with p0.y
+   343  012d  3001                  jr nc, _seq2        ; If p1.y > p0.y, no need to swap, jump
+   344  012f  eb                    ex de, hl           ; Swap p0 and p1. Now we have p0 < p1 < p2 on the y axis (lh < de < bc)
+   345                              ;jp _stop          ; DEBUG: All good here: hl 3C5A | de 7896 | bc B464 -- the correct testing coords ******
+   346                          _seq2:
+   347  0130  220f00                ld (p0), hl         ; Stores p0
+   348  0133  ed531100              ld (p1), de         ; Stores p1
+   349  0137  ed431300              ld (p2), bc         ; Stores p2
+   350  013b  c1                    pop bc              ; Pops colour value into c
+   351  013c  fde5                  push iy             ; Restores stack
+   352  013e  fd69                  ld iyl, c           ; Loads colour into iyl
+   353                              ;jp _stop           ; DEBUG: All good here
+   354                          
+   355                          fillTrigL2:
+   356  0140  dd210500              ld ix, Tri_ac_r0    ; Sets ix with the address of the first var of the p0-p2 line, so we can access other params sequentially from it
+   357  0144  cdda01                call pri_tri_p0p2   ; Calls the set up of the long side of the triangle between p0 and p2
+   358  0147  dd210a00              ld ix, Tri_ab_r0    ; Sets ix with the address of the first var of the p0-p1 line, so we can access other params sequentially from it
+   359  014b  cdc201                call pri_tri_p0p1   ; Calls the set up of the upper short side of the triangle between p0 and p1
+   360  014e  cd0c02                call pri_tri_lc     ; Calls the triangle loop counter
+   361  0151  2a0f00                ld hl, (p0)         ; Loads p0.y onto h
+   362                              ;jp _stop
+   363  0154  cd6301                call draw_triangle  ; call 1f... Find out WHAT THE HELL IS IN ADDRESS 1F OF THIS CODE. WHAT A WAY OF DOING THIS...
+   364  0157  e5                    push hl             ; Stores hl on the stack
+   365  0158  dd210a00              ld ix, Tri_ab_r0    ; Sets ix with the address of the first var of the p0-p1 line, so we can access other params sequentially from it
+   366  015c  cdce01                call pri_tri_p1p2   ; Calls the set up of the lower short side of the triangle between p1 and p2
+   367  015f  cd0c02                call pri_tri_lc     ; Calls the triangle loop counter
+   368  0162  e1                    pop hl              ; Restores hl from stack
+   369                          
+   370                          draw_triangle:
+   371  0163  78                    ld a, b             ; We'll check if the triangle height is zero, first we load the loop counter here from pri_tri_lc
+   372                              ;or c                ; THIS WAS FROM OLD 16bits CODE TO DEAL WITH COUNTER BEING ORIGINALLY BC, SO IT MERGED B AND C WITH AN OR
+   373  0164  0e00                  ld c, 0x00          ; Because we need a test for zero below in case the loop counter gets here as zero...
+   374  0166  b9                    cp c                ; We load zero into c and compare it with a (which contains the loop from b)
+   375  0167  c8                    ret z               ; If it's zero, means loop counter is done, we end it
+   376  0168  c5                    push bc             ; Stack the loop counter - important because pri_tri_b destroys b (our counter)
+   377  0169  e5                    push hl             ; Stacks y
+   378  016a  dd210500              ld ix, Tri_ac_r0    ; Switches to p0-p2 line
+   379                              ;jp _stop            ; DEBUG: ALL SEEMS IN ORDER UP TO HERE
+   380  016e  cd8b01                call pri_tri_b      ; Advances the long p0-p2 line to its next pixel
+   381  0171  dd210a00              ld ix, Tri_ab_r0    ; Switches to p0-p1 line
+   382  0175  cd8b01                call pri_tri_b      ; Advances the short p0-p1 line to its next pixel
+   383                              ;jp _stop            ; DEBUG: SEEMS OK UP TO HERE
+   384  0178  e1                    pop hl              ; Brings hl back from stack
+   385  0179  e5                    push hl             ; Stacks hl again, but hl remains restored
+   386  017a  ed4b0500              ld bc, (Tri_ac_r0)  ; Loads the first point of the horizontal line
+   387  017e  ed5b0a00              ld de, (Tri_ab_r0)  ; Loads the second point of the horizontal line
+   388  0182  cd1a02                call pri_line_hor   ; Draws the line between the two points, filling this step of the triangle
+   389  0185  e1                    pop hl              ; Restores hl
+   390  0186  24                    inc h               ; Increments y *** ORIGINAL CODE IS HL, BUT I THINK IT WANTS TO INCREMENT Y ***
+   391  0187  c1                    pop bc              ; Restores loop counter and y index
+   392  0188  05                    dec b               ; Decreases loop / y index *** THIS SURELY WONT WORK AND DOESN'T NEED TO BE 16bits - ORIGINALLY BC, CHANGED TO B
+   393  0189  18d8                  jr draw_triangle    ; Loops back to top
+   394                          
+   395                          pri_tri_b:              ; Bresenhams calculations go here
+   396  018b  dd6603                ld h, (ix + 3)      ; Loads Bresenhams error into h, works for both lines depending on where ix is pointing to (Tri_ac_r0 or Tri_ab_r0)
+   397  018e  dd4601                ld b, (ix + 1)      ; Loads deltax into b
+   398  0191  dd5602                ld d, (ix + 2)      ; Loads deltay into d
+   399  0194  ddcb044e              bit 1, (ix + 4)     ; Checks quadrant of line but comparing with the bit on the flag store
+   400  0198  280e                  jr z, pri_tri_b_seq2; If zero, skip piece of code below
+   401  019a  7c                    ld a, h             ; Loads error into a
+   402  019b  92                    sub d               ; error = error - deltay
+   403  019c  67                    ld h, a             ; Puts error back in h after operation above
+   404  019d  3005                  jr nc, pri_tri_b_seq1; If no carry, skip code below, otherwise continues - DEBUG: 3C-0A, NOT ZERO, JUMPS
+   405  019f  80                    add b               ; error = error + deltax
+   406  01a0  67                    ld h, a             ; Stores error back on h
+   407  01a1  cdb401                call pri_tri_x      ; Moves the x coordinate ***CHECK THIS!!!***
+   408                          pri_tri_b_seq1:         ; Jumps to store the error if no carry, skipping the error + deltax step
+   409  01a4  dd7403                ld (ix + 3), h      ; Stores the error into its place for this specific line
+   410  01a7  c9                    ret                 ; We're done here and return
+   411                          pri_tri_b_seq2:
+   412  01a8  cdb401                call pri_tri_x      ; Moves the x coordinate of the line left or right depending on case
+   413  01ab  7c                    ld a, h             ; Loads error into a
+   414  01ac  92                    sub d               ; Subtracts deltay (error = error - deltay)
+   415  01ad  30f9                  jr nc, pri_tri_b_seq2; If no carry, loops right back up to work on error again until carry set
+   416  01af  80                    add b               ; Carry was set, we now add deltax (error = error + deltax)
+   417  01b0  dd7403                ld (ix + 3), h      ; Stores the error into its place for this specific line
+   418  01b3  c9                    ret                 ; We're done here and return
+   419                          
+   420                          pri_tri_x:              ; Moves x coord 1 pixel left or right depending on the line type
+   421  01b4  ddcb0446              bit 0, (ix + 4)     ; Sets the direction we're headed towards with x, left or right
+   422  01b8  2004                  jr nz, pri_tri_x_seq1; If not zero, we're going left, not right, so decrease
+   423  01ba  dd3400                inc (ix + 0)        ; Increases line's x
+   424  01bd  c9                    ret                 ; *** SIMPLIFIED CODE FROM 16bit, THERE WAS MORE TO IT ORIGINALLY, COULD BREAK
+   425                          pri_tri_x_seq1:
+   426  01be  dd3500                dec (ix + 0)        ; Decreases line's x
+   427  01c1  c9                    ret                 ; *** SIMPLIFIED CODE FROM 16bit, THERE WAS MORE TO IT ORIGINALLY, COULD BREAK
+   428                          
+   429                          ; Initialises a block of variables for a line
+   430                          ; ix points at the start of the block
+   431                          ; b points to line start coordinates in p
+   432                          ; c points to line end coordinates in p'
+   433                          ; ix: 5 bytes required per line
+   434                          ; +00: x
+   435                          ; +01: deltax
+   436                          ; +02: deltay
+   437                          ; +03: Bresenhams error
+   438                          ; +04: Flags / Quadrant
+   439                          pri_tri_p0p1:           ; Initialises the line p0-p1 *** THIS IS HEAVILLY 16bits, NEEDS CAREFUL REVIEW TO SEE IF CHANGES WORK!
+   440  01c2  2a1100                ld hl, (p1)         ; Loads P1.y into h and p1.x into l
+   441  01c5  ed5b0f00              ld de, (p0)         ; Loads p0.y into d and p0.x into e
+   442  01c9  7c                    ld a, h             ; Loads p1.y into a
+   443  01ca  92                    sub d               ; p1.y - p0.y = deltay
+   444  01cb  57                    ld d, a             ; Stores deltay into d
+   445                              ;jp _stop            ; DEBUG: IT SEEMS IX GOT A BIT MESSED UP HERE... ix+0 HAS 3C02 WHICH ARE VALUES FROM THE OTHER ix START ADDRESS!
+   446  01cc  1816                  jr pri_tri_i        ; Make sure pri_tri_i takes l and e as x rather than hl and bc as in the original code
+   447                          
+   448                          pri_tri_p1p2:           ; Initialises the line p1-p2
+   449  01ce  2a1300                ld hl, (p2)         ; Loads P2.y into h and p2.x into l
+   450  01d1  ed5b1100              ld de, (p1)         ; Loads p1.y into d and p1.x into e
+   451  01d5  7c                    ld a, h             ; Loads p2.y into a
+   452  01d6  92                    sub d               ; p2.y - p1.y = deltay
+   453  01d7  57                    ld d, a             ; Stores deltay into d
+   454  01d8  180a                  jr pri_tri_i        ; Make sure pri_tri_i takes l and e as x rather than hl and bc as in the original code
+   455                          
+   456                          pri_tri_p0p2:           ; Initialises the line p0-p2 (actually p2-p0)
+   457  01da  2a1300                ld hl, (p2)         ; Loads P2.y into h and p2.x into l
+   458  01dd  ed5b0f00              ld de, (p0)         ; Loads p0.y into d and p0.x into e
+   459  01e1  7c                    ld a, h             ; Loads p2.y into a
+   460  01e2  92                    sub d               ; p2.y - p0.y = deltay
+   461  01e3  57                    ld d, a             ; Stores deltay into d
+   462                              ;jp _stop            ; DEBUG: ALL GOOD UP TO HERE
+   463                              ;jr pri_tri_i        ; Unnecessary here as pri_tri_i is right below
+   464                          
+   465                          pri_tri_i:              ; Generic primitive triangle initialisation
+   466  01e4  dd7300                ld (ix + 0), e      ; Stores first x from calling code back into the address - DEBUG: ix+0 has 5A here
+   467  01e7  7d                    ld a, l             ; Loads the second x from calling code into a
+   468  01e8  93                    sub e               ; Subtract both x to get to deltax
+   469  01e9  67                    ld h, a             ; h now has deltax
+   470  01ea  0e00                  ld c, 0x00          ; Zeroes c
+   471                              ;jp _stop            ; DEBUG: ALL GOOD UP TO HERE - WITH OUR TEST TRIANGLE deltax is POS, so goes to seq1
+   472  01ec  f2f401                jp p, pri_tri_i_seq1;
+   473  01ef  ed44                  neg                 ; Neg a (which still has deltax)
+   474  01f1  67                    ld h, a             ; Stores new neg'ed deltax
+   475  01f2  0e01                  ld c, 0x01          ; c = 1
+   476                          pri_tri_i_seq1:
+   477  01f4  7c                    ld a, h             ; Loads deltax into a
+   478  01f5  ba                    cp d                ; Compares with deltay, if no carry, deltax > deltay
+   479                              ;jp _stop            ; DEBUG: ALL GOOD UP TO HERE. deltax < deltay (10 < 120) so we will set a carry here
+   480  01f6  3005                  jr nc, pri_tri_i_seq2   ; Jumps to seq2 in the code skipping next part
+   481  01f8  7c                    ld a, h             ; If deltay > deltax we swap them around
+   482  01f9  62                    ld h, d             ; Swapping...
+   483  01fa  57                    ld d, a             ; deltax and deltay are now swapped
+   484  01fb  cbc9                  set 1, c            ; And we set the deltay > deltax flag this way
+   485                              ;jp _stop            ; DEBUG: ALL GOOD UP TO HERE. deltay (d) has 0A, deltax (h) has 78, x (ix+0) has 5A, c has 02
+   486                          pri_tri_i_seq2:
+   487  01fd  dd7401                ld (ix + 1), h      ; We store back deltax into its place in memory for the current line
+   488  0200  dd7202                ld (ix + 2), d      ; We store back deltay into its place in memory for the current line
+   489                              ;SRL H RR L !!! *** NEEDS DOUBLE CHECKING THIS
+   490  0203  cb3c                  srl h               ; error = error / 2
+   491  0205  dd7403                ld (ix + 3), h      ; New error stored into its place in memory for the current line
+   492  0208  dd7104                ld (ix + 4), c      ; New flags stored into its place in memory for the current line
+   493                              ;jp _stop            ; DEBUG: ALL GOOD UP TO HERE. x (ix+0) has 5A, deltax (ix+1) has 78, deltay (ix+2) has 0A, error (ix+3) has 3C (half of deltay), flags (ix+4) has 02, ix has 94F8
+   494  020b  c9                    ret
+   495                          
+   496                          pri_tri_lc:
+   497  020c  ddcb044e              bit 1, (ix + 4)     ; Return the correct loop counter by checking the flag state storage, if the value in ix + 4 has a bit 1 on pos 1
+   498  0210  2804                  jr z, pri_tri_lc_seq; If loop counter returns zero, jump
+   499  0212  dd4601                ld b, (ix + 1)      ; Loads deltax into b for looping
+   500  0215  c9                    ret
+   501                          pri_tri_lc_seq:
+   502  0216  dd4602                ld b, (ix + 2)      ; Loads deltay into b for looping
+   503                              ;jp _stop            ; DEBUG: SEEMS LIKE ALL GOOD UP TO HERE?
+   504  0219  c9                    ret
+   505                          
+   506                          pri_line_hor:           ; bc has x1 on c; de has x2 on e
+   507  021a  7b                    ld a, e             ; Loads x2 into a
+   508  021b  91                    sub c               ; Subtracts x1 to get length of line
+   509  021c  c8                    ret z               ; If x2 - x1 = 0, we have no line to draw, end it.
+   510  021d  47                    ld b, a             ; Stores length of line as loop counter in b
+   511  021e  69                    ld l, c             ; h already has y; loads x1 into l, so PlotPixel8K has y,x into h,l
+   512                          pri_line_hor_loop:      ; Start drawing!
+   513                              ;jp _stop            ; DEBUG: OUR FIRST TIME HERE WE HAVE x1=5A, x2=5B, y=3C CORRECT | BUT x1 ISN'T INCREASING AFTER THIS IS EXECUTED...
+   514  021f  4c                    ld c, h             ; Let's preserve h since PlotPixel8K destroys it
+   515  0220  cd5500                call PlotPixel8K    ; Draw! Yey!
+   516  0223  61                    ld h, c             ; Restore h after PlotPixel8K's execution
+   517  0224  05                    dec b               ; Decrease loop (size of horizontal line)
+   518  0225  c8                    ret z               ; Ends when b = 0
+   519  0226  2c                    inc l               ; Increments x before drawing again
+   520  0227  c31f02                jp pri_line_hor_loop; Loops back
+   521                          
+   522                          ;extern void fillTrigL2(Point pt0, Point pt1, Point pt2, uint8_t colour) __z88dk_callee;
+   523                          ; A filled triangle drawing routine
+   524                          ;=================================================================================================
+   525                          ;PUBLIC _fillTrigL2, fillTrigL2
+   526                          ;_fillTrigL2:            ; The triangle drawns from top to bottom, we need to ensure p0 < p1 < p2 on its y, so we order it as such
+   527                          ;    p0: defw 0          ; Variable (mem address) to store p0
+   528                          ;    p1: defw 0          ; Variable (mem address) to store p1
+   529                          ;    p2: defw 0          ; Variable (mem address) to store p2
+   530                          ;    x01: defw 0xFA00    ; Memory start of x01 array is 64000
+   531                          ;    x12: defw 0xFAC0    ; Memory start of x12 array is 64192
+   532                          ;    x02: defw 0xFB80    ; Memory start of x02 array is 64384
+   533                          ;    pop iy              ; Pops sp into iy
+   534                          ;    pop hl              ; Pops p0.y and p0.x into hl
+   535                          ;    pop de              ; Pops p1.y and p1.x into de
+   536                          ;    ld a, d             ; Loads p1.y into a
+   537                          ;    cp h                ; Compares p1.y with p0.y
+   538                          ;    jr nc, _seq1        ; If p1.y > p0.y, no need to swap, jump
+   539                          ;    ex de, hl           ; Swap p0 and p1, de now has the largest y of the two
+   540                          ;    ;jp _stop
+   541                          ;_seq1:                  ; Here we have p0.y < p1.y | h < d, now we need to check p2
+   542                          ;    pop bc              ; Pops p2.y and p2.x into bc
+   543                          ;    ld a, b             ; Loads p2.y into a
+   544                          ;    cp d                ; Compares p2.y with p1.y
+   545                          ;    jr nc, _seq2        ; If p2.y > p1.y, and here we already have p1.y > p0.y, we are done and jump out
+   546                          ;    push bc             ; If p2.y < p1.y we need to swap p2 with p1, so we push p2 into stack
+   547                          ;    push de             ; Push p1 into stack
+   548                          ;    pop bc              ; Pop p1 into bc, becoming the new p2 > p1 on y
+   549                          ;    pop de              ; Pop p2 into de, becoming the new p1 < p2 on y
+   550                          ;    ld a, d             ; Lastly, we need to compare the new p1 < p0, if not swap them
+   551                          ;    cp h                ; Compares the new p1.y with p0.y
+   552                          ;    jr nc, _seq2        ; If p1.y > p0.y, no need to swap, jump
+   553                          ;    ex de, hl           ; Swap p0 and p1. Now we have p0 < p1 < p2 on the y axis (lh < de < bc)
+   554                          ;    ;jp _stop           DEBUG: All good here: hl 3C5A | de 7896 | bc B464 -- the correct testing coords ******
+   555                          ;_seq2:
+   556                          ;    ld (p0), hl         ; Stores p0
+   557                          ;    ld (p1), de         ; Stores p1
+   558                          ;    ld (p2), bc         ; Stores p2
+   559                          ;    pop bc              ; Pops colour value into c
+   560                          ;    push iy             ; Restores stack
+   561                          ;    ld iyl, c           ; Loads colour into iyl
+   562                          ;    ;jp _stop           DEBUG: All good here
+   563                          ;
+   564                          ;fillTrigL2:             ; We begin with certainty that p0 < p1 < p2 on y
+   565                          ;    nop
+   566                          ;interpolate_p0:         ; Interpolates p0.y, p0.x (hl) with p1.y, p1.x (de) and fills memory in iy with the interpolations
+   567                          ;    ld iy, x01          ; Sets the starting address of the array x01 at 64000 (FA00)
+   568                          ;    ld a, d             ; Loads p1.y into a for comparison with p0.y
+   569                          ;    cp h                ; Compares p0.y with p1.y
+   570                          ;    jr nz, inter_p0_1   ; If Z is not set, jump. If it is, p0.y = p1.y, do we just return p0.x
+   571                          ;    ld (iy), l          ; Return p0.x only, that's all, by loading it into the array x01 kept in memory
+   572                          ;    ret                 ; We are done
+   573                          ;inter_p0_1:
+   574                          ;    sub h               ; We have got p0.y on h and p1.y on d as we just compared them, thus a now has deltay
+   575                          ;    ld b, a             ; Loads deltay into b
+   576                          ;    ld a, e             ; Loads p1.x into e
+   577                          ;    sub l               ; Subtracts p1.x - p0.x to get deltax
+   578                          ;    ld c, a             ; Loads deltax into c
+   579                          ;    ;Self modify here to reuse deltax befor we destroy it
+   580                          ;
+   581                          ;    ret
+   582                          

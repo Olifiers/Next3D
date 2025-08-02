@@ -36,6 +36,7 @@ extern void clearL2(uint8_t colour) __z88dk_fastcall;               // asm to cl
 extern void PlotPixel8K(uint8_t xcoord, uint8_t ycoord, uint8_t colour) __z88dk_callee;
 extern void drawL2(uint8_t x1coord, uint8_t y1coord, uint8_t x2coord, uint8_t y2coord, uint8_t colour) __z88dk_callee;
 extern void trigL2(Point pt0, Point pt1, Point pt2, uint8_t colour) __z88dk_callee;
+extern void fillTrigL2(Point pt0, Point pt1, Point pt2, uint8_t colour) __z88dk_callee;
 uint8_t max(uint8_t a, uint8_t b);                                  // max implementation, finds the larger of two numbers
 void drawFillTrig(Point pt0, Point pt1, Point pt2, uint8_t colour);    // Filled triangle routine declaration
 uint8_t interpolate(uint8_t i0, uint8_t d0, uint8_t i1, uint8_t d1, uint8_t* values);
@@ -148,6 +149,21 @@ void main(void)
 
     trigL2(p0, p1, p2, 3);
     zx_border(INK_MAGENTA);
+
+    p0.x = 80; p0.y = 180;
+    //p0.x = 110; p0.y = 180;
+    p1.x = 150; p1.y = 120;
+    p2.x = 90; p2.y = 60;
+
+    trigL2(p0, p1, p2, 3);
+    zx_border(INK_BLUE);
+
+    fillTrigL2(p0, p1, p2, 56);
+    zx_border(INK_RED);
+
+    PlotPixel8K(p0.x, p0.y, 0);
+    PlotPixel8K(p1.x, p1.y, 0);
+    PlotPixel8K(p2.x, p2.y, 0);
 
     while(1){};
 

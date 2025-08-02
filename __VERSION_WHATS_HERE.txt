@@ -1,8 +1,9 @@
+- Implemented filled triangle in asm, still has a couple of bugs being worked on...
+Previous:
 - Further optimisations to the drawL2 Bresenham's, with self-modifying code for the colour
 - Replaced a few calls with jp in drawL2
 - Implemented the optimised trigL2 in asm (wireframe triangle drawing)
 - TODO: Make a copy of drawL2 where trigL2 can modify the colour once and draw, without changing colour at the start of drawL2 (Optimisation)
-
 Previous:
 - New asm implementaion of Bresenham's draw, faster and simpler
 Previous:

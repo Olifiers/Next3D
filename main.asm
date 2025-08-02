@@ -7,6 +7,25 @@ EXTERN  _x2:        db  0
 EXTERN  _y2:        db  0
 EXTERN  _colour:    db  0
 
+; ===========================================================================================
+    ; Perenial definitions for trigFillL2 (routine to draw filled triangles)
+    ; Triangle line p0-p2
+    Tri_ac_r0: defs 1   ; x
+    Tri_ac_r1: defs 1   ; Width/deltax
+    Tri_ac_r2: defs 1   ; Height/deltay
+    Tri_ac_r3: defs 1   ; Error Bresenhams
+    Tri_ac_r4: defs 1   ; Quadrant... Direction... Bit? 0 or 1 -- Flags
+    ; Triangle line p0-p1
+    Tri_ab_r0: defs 1   ; x
+    Tri_ab_r1: defs 1   ; Width/deltax
+    Tri_ab_r2: defs 1   ; Height/deltay
+    Tri_ab_r3: defs 1   ; Error Bresenhams
+    Tri_ab_r4: defs 1   ; Quadrant... Direction... Bit? 0 or 1 -- Flags
+    ; Triangle point coordinates
+    p0: defs 2          ; p0.y and p0.x
+    p1: defs 2          ; p1.y and p1.x
+    p2: defs 2          ; p2.y and p2.x
+
 
 ; extern void stop(void)
 ; A debugging tool. Jump here (jp _stop) from your code so you can stop and inspect registers etc.
@@ -24,7 +43,7 @@ PUBLIC _setCPU
 _setCPU:
 
     ;;NEXTREG 03h,%00110011 ; Set machine to Spectrum Next
-    NEXTREG 07h,3           ; Set CPU to 28MHz
+    NEXTREG 07h,0           ; Set CPU to 28MHz (CURRENTLY SET TO 0 FOR DEBUG!!!)
     RET
 
 
@@ -104,6 +123,7 @@ _PlotPixel8K:
    	ex de, hl       ; Put y and x into hl and the colour into d
     ld iyl, d       ; Puts colour into iyl in order to free d for the drawline
 
+
 PlotPixel8K:
 ;===========================================================================
 ;	HL = YX, IYL = colour -- IMPORTANT: DESTROYS H (and A)
@@ -120,6 +140,19 @@ PlotPixel8K:
 	ld h, a 				    ; Puts y it back in h
     ld a, iyl                   ; Loads colour from iyl into a
 	ld (hl), a			        ; Draw our pixel
+    ; TEMP: SLOW DOWN FOR DEBUG
+    ld a, 255
+    ;ld e, 255
+loopy:
+    nop
+    nop
+    nop
+    nop
+    nop
+    ;dec e
+    ;jr nz, loopy
+    dec a
+    jr nz, loopy
 	ret
 
 
@@ -222,7 +255,7 @@ draw_line_q1_m2:        ; This either increases or decreases l by the self modif
     inc l               ; Self-modified code: It will be either inc l or dec l depending on direction of horizontal drawing
 draw_line_q1_s:         ; Tests to loop and keep drawing line
     djnz draw_line_q1_l ; Loops until line is drawn and zero flag set
-    jp PlotPixel8KCol    ; This is the last pixel, draws and quits
+    jp PlotPixel8KCol   ; This is the last pixel, draws and quits
 draw_line_q2:           ; Here the line is verticalish or perfectly diagonal
     ld (draw_line_q2_m1 + 1), a ; Self-modifies the code to store deltay in the loop
     ld e, b             ; e = deltay
@@ -230,7 +263,7 @@ draw_line_q2:           ; Here the line is verticalish or perfectly diagonal
 ; loop uses d as temp, hl bc e
 draw_line_q2_l:         ; The main drawline loop for this case
     ld d, h             ; OPTIMISE? Backs up h into d
-    call PlotPixel8KCol    ; PlotPixel8KCol destroys h, so we need to preserve it
+    call PlotPixel8KCol ; PlotPixel8KCol destroys h, so we need to preserve it
     ld h, d             ; OPTIMISE? Restores h from d
     ld a, e             ; Adds deltax to the error
     sub c               ; As above
@@ -279,33 +312,270 @@ l3:                     ; Line 3
     ret                 ; We're done, return nicely
 
 
-;PUBLIC _trigL2, trigL2
-;_trigL2:
+;extern void fillTrigL2(Point pt0, Point pt1, Point pt2, uint8_t colour) __z88dk_callee;
+; A filled triangle drawing routine
+;=================================================================================================
+PUBLIC _fillTrigL2, fillTrigL2
+_fillTrigL2:
+    ;p0: Variable (mem address) to store p0
+    ;p1: Variable (mem address) to store p1
+    ;p2: Variable (mem address) to store p2
+    ; End of definitions
+    pop iy              ; Pops sp into iy
+    pop hl              ; Pops p0.y and p0.x into hl
+    pop de              ; Pops p1.y and p1.x into de
+    ld a, d             ; Loads p1.y into a
+    cp h                ; Compares p1.y with p0.y
+    jr nc, _seq1        ; If p1.y > p0.y, no need to swap, jump
+    ex de, hl           ; Swap p0 and p1, de now has the largest y of the two
+    ;jp _stop
+_seq1:                  ; Here we have p0.y < p1.y | h < d, now we need to check p2
+    pop bc              ; Pops p2.y and p2.x into bc
+    ld a, b             ; Loads p2.y into a
+    cp d                ; Compares p2.y with p1.y
+    jr nc, _seq2        ; If p2.y > p1.y, and here we already have p1.y > p0.y, we are done and jump out
+    push bc             ; If p2.y < p1.y we need to swap p2 with p1, so we push p2 into stack
+    push de             ; Push p1 into stack
+    pop bc              ; Pop p1 into bc, becoming the new p2 > p1 on y
+    pop de              ; Pop p2 into de, becoming the new p1 < p2 on y
+    ld a, d             ; Lastly, we need to compare the new p1 < p0, if not swap them
+    cp h                ; Compares the new p1.y with p0.y
+    jr nc, _seq2        ; If p1.y > p0.y, no need to swap, jump
+    ex de, hl           ; Swap p0 and p1. Now we have p0 < p1 < p2 on the y axis (lh < de < bc)
+    ;jp _stop          ; DEBUG: All good here: hl 3C5A | de 7896 | bc B464 -- the correct testing coords ******
+_seq2:
+    ld (p0), hl         ; Stores p0
+    ld (p1), de         ; Stores p1
+    ld (p2), bc         ; Stores p2
+    pop bc              ; Pops colour value into c
+    push iy             ; Restores stack
+    ld iyl, c           ; Loads colour into iyl
+    ;jp _stop           ; DEBUG: All good here
+
+fillTrigL2:
+    ld ix, Tri_ac_r0    ; Sets ix with the address of the first var of the p0-p2 line, so we can access other params sequentially from it
+    call pri_tri_p0p2   ; Calls the set up of the long side of the triangle between p0 and p2
+    ld ix, Tri_ab_r0    ; Sets ix with the address of the first var of the p0-p1 line, so we can access other params sequentially from it
+    call pri_tri_p0p1   ; Calls the set up of the upper short side of the triangle between p0 and p1
+    call pri_tri_lc     ; Calls the triangle loop counter
+    ld hl, (p0)         ; Loads p0.y onto h
+    ;jp _stop
+    call draw_triangle  ; call 1f... Find out WHAT THE HELL IS IN ADDRESS 1F OF THIS CODE. WHAT A WAY OF DOING THIS...
+    push hl             ; Stores hl on the stack
+    ld ix, Tri_ab_r0    ; Sets ix with the address of the first var of the p0-p1 line, so we can access other params sequentially from it
+    call pri_tri_p1p2   ; Calls the set up of the lower short side of the triangle between p1 and p2
+    call pri_tri_lc     ; Calls the triangle loop counter
+    pop hl              ; Restores hl from stack
+
+draw_triangle:
+    ld a, b             ; We'll check if the triangle height is zero, first we load the loop counter here from pri_tri_lc
+    ;or c                ; THIS WAS FROM OLD 16bits CODE TO DEAL WITH COUNTER BEING ORIGINALLY BC, SO IT MERGED B AND C WITH AN OR
+    ld c, 0x00          ; Because we need a test for zero below in case the loop counter gets here as zero...
+    cp c                ; We load zero into c and compare it with a (which contains the loop from b)
+    ret z               ; If it's zero, means loop counter is done, we end it
+    push bc             ; Stack the loop counter - important because pri_tri_b destroys b (our counter)
+    push hl             ; Stacks y
+    ld ix, Tri_ac_r0    ; Switches to p0-p2 line
+    ;jp _stop            ; DEBUG: ALL SEEMS IN ORDER UP TO HERE
+    call pri_tri_b      ; Advances the long p0-p2 line to its next pixel
+    ld ix, Tri_ab_r0    ; Switches to p0-p1 line
+    call pri_tri_b      ; Advances the short p0-p1 line to its next pixel
+    ;jp _stop            ; DEBUG: SEEMS OK UP TO HERE
+    pop hl              ; Brings hl back from stack
+    push hl             ; Stacks hl again, but hl remains restored
+    ld bc, (Tri_ac_r0)  ; Loads the first point of the horizontal line
+    ld de, (Tri_ab_r0)  ; Loads the second point of the horizontal line
+    call pri_line_hor   ; Draws the line between the two points, filling this step of the triangle
+    pop hl              ; Restores hl
+    inc h               ; Increments y *** ORIGINAL CODE IS HL, BUT I THINK IT WANTS TO INCREMENT Y ***
+    pop bc              ; Restores loop counter and y index
+    dec b               ; Decreases loop / y index *** THIS SURELY WONT WORK AND DOESN'T NEED TO BE 16bits - ORIGINALLY BC, CHANGED TO B
+    jr draw_triangle    ; Loops back to top
+
+pri_tri_b:              ; Bresenhams calculations go here
+    ld h, (ix + 3)      ; Loads Bresenhams error into h, works for both lines depending on where ix is pointing to (Tri_ac_r0 or Tri_ab_r0)
+    ld b, (ix + 1)      ; Loads deltax into b
+    ld d, (ix + 2)      ; Loads deltay into d
+    bit 1, (ix + 4)     ; Checks quadrant of line but comparing with the bit on the flag store
+    jr z, pri_tri_b_seq2; If zero, skip piece of code below
+    ld a, h             ; Loads error into a
+    sub d               ; error = error - deltay
+    ld h, a             ; Puts error back in h after operation above
+    jr nc, pri_tri_b_seq1; If no carry, skip code below, otherwise continues - DEBUG: 3C-0A, NOT ZERO, JUMPS
+    add b               ; error = error + deltax
+    ld h, a             ; Stores error back on h
+    call pri_tri_x      ; Moves the x coordinate ***CHECK THIS!!!***
+pri_tri_b_seq1:         ; Jumps to store the error if no carry, skipping the error + deltax step
+    ld (ix + 3), h      ; Stores the error into its place for this specific line
+    ret                 ; We're done here and return
+pri_tri_b_seq2:
+    call pri_tri_x      ; Moves the x coordinate of the line left or right depending on case
+    ld a, h             ; Loads error into a
+    sub d               ; Subtracts deltay (error = error - deltay)
+    jr nc, pri_tri_b_seq2; If no carry, loops right back up to work on error again until carry set
+    add b               ; Carry was set, we now add deltax (error = error + deltax)
+    ld (ix + 3), h      ; Stores the error into its place for this specific line
+    ret                 ; We're done here and return
+
+pri_tri_x:              ; Moves x coord 1 pixel left or right depending on the line type
+    bit 0, (ix + 4)     ; Sets the direction we're headed towards with x, left or right
+    jr nz, pri_tri_x_seq1; If not zero, we're going left, not right, so decrease
+    inc (ix + 0)        ; Increases line's x
+    ret                 ; *** SIMPLIFIED CODE FROM 16bit, THERE WAS MORE TO IT ORIGINALLY, COULD BREAK
+pri_tri_x_seq1:
+    dec (ix + 0)        ; Decreases line's x
+    ret                 ; *** SIMPLIFIED CODE FROM 16bit, THERE WAS MORE TO IT ORIGINALLY, COULD BREAK
+
+; Initialises a block of variables for a line
+; ix points at the start of the block
+; b points to line start coordinates in p
+; c points to line end coordinates in p'
+; ix: 5 bytes required per line
+; +00: x
+; +01: deltax
+; +02: deltay
+; +03: Bresenhams error
+; +04: Flags / Quadrant
+pri_tri_p0p1:           ; Initialises the line p0-p1 *** THIS IS HEAVILLY 16bits, NEEDS CAREFUL REVIEW TO SEE IF CHANGES WORK!
+    ld hl, (p1)         ; Loads P1.y into h and p1.x into l
+    ld de, (p0)         ; Loads p0.y into d and p0.x into e
+    ld a, h             ; Loads p1.y into a
+    sub d               ; p1.y - p0.y = deltay
+    ld d, a             ; Stores deltay into d
+    ;jp _stop            ; DEBUG: IT SEEMS IX GOT A BIT MESSED UP HERE... ix+0 HAS 3C02 WHICH ARE VALUES FROM THE OTHER ix START ADDRESS!
+    jr pri_tri_i        ; Make sure pri_tri_i takes l and e as x rather than hl and bc as in the original code
+
+pri_tri_p1p2:           ; Initialises the line p1-p2
+    ld hl, (p2)         ; Loads P2.y into h and p2.x into l
+    ld de, (p1)         ; Loads p1.y into d and p1.x into e
+    ld a, h             ; Loads p2.y into a
+    sub d               ; p2.y - p1.y = deltay
+    ld d, a             ; Stores deltay into d
+    jr pri_tri_i        ; Make sure pri_tri_i takes l and e as x rather than hl and bc as in the original code
+
+pri_tri_p0p2:           ; Initialises the line p0-p2 (actually p2-p0)
+    ld hl, (p2)         ; Loads P2.y into h and p2.x into l
+    ld de, (p0)         ; Loads p0.y into d and p0.x into e
+    ld a, h             ; Loads p2.y into a
+    sub d               ; p2.y - p0.y = deltay
+    ld d, a             ; Stores deltay into d
+    ;jp _stop            ; DEBUG: ALL GOOD UP TO HERE
+    ;jr pri_tri_i        ; Unnecessary here as pri_tri_i is right below
+
+pri_tri_i:              ; Generic primitive triangle initialisation
+    ld (ix + 0), e      ; Stores first x from calling code back into the address - DEBUG: ix+0 has 5A here
+    ld a, l             ; Loads the second x from calling code into a
+    sub e               ; Subtract both x to get to deltax
+    ld h, a             ; h now has deltax
+    ld c, 0x00          ; Zeroes c
+    ;jp _stop            ; DEBUG: ALL GOOD UP TO HERE - WITH OUR TEST TRIANGLE deltax is POS, so goes to seq1
+    jp p, pri_tri_i_seq1;
+    neg                 ; Neg a (which still has deltax)
+    ld h, a             ; Stores new neg'ed deltax
+    ld c, 0x01          ; c = 1
+pri_tri_i_seq1:
+    ld a, h             ; Loads deltax into a
+    cp d                ; Compares with deltay, if no carry, deltax > deltay
+    ;jp _stop            ; DEBUG: ALL GOOD UP TO HERE. deltax < deltay (10 < 120) so we will set a carry here
+    jr nc, pri_tri_i_seq2   ; Jumps to seq2 in the code skipping next part
+    ld a, h             ; If deltay > deltax we swap them around
+    ld h, d             ; Swapping...
+    ld d, a             ; deltax and deltay are now swapped
+    set 1, c            ; And we set the deltay > deltax flag this way
+    ;jp _stop            ; DEBUG: ALL GOOD UP TO HERE. deltay (d) has 0A, deltax (h) has 78, x (ix+0) has 5A, c has 02
+pri_tri_i_seq2:
+    ld (ix + 1), h      ; We store back deltax into its place in memory for the current line
+    ld (ix + 2), d      ; We store back deltay into its place in memory for the current line
+    ;SRL H RR L !!! *** NEEDS DOUBLE CHECKING THIS
+    srl h               ; error = error / 2
+    ld (ix + 3), h      ; New error stored into its place in memory for the current line
+    ld (ix + 4), c      ; New flags stored into its place in memory for the current line
+    ;jp _stop            ; DEBUG: ALL GOOD UP TO HERE. x (ix+0) has 5A, deltax (ix+1) has 78, deltay (ix+2) has 0A, error (ix+3) has 3C (half of deltay), flags (ix+4) has 02, ix has 94F8
+    ret
+
+pri_tri_lc:
+    bit 1, (ix + 4)     ; Return the correct loop counter by checking the flag state storage, if the value in ix + 4 has a bit 1 on pos 1
+    jr z, pri_tri_lc_seq; If loop counter returns zero, jump
+    ld b, (ix + 1)      ; Loads deltax into b for looping
+    ret
+pri_tri_lc_seq:
+    ld b, (ix + 2)      ; Loads deltay into b for looping
+    ;jp _stop            ; DEBUG: SEEMS LIKE ALL GOOD UP TO HERE?
+    ret 
+
+pri_line_hor:           ; bc has x1 on c; de has x2 on e
+    ld a, e             ; Loads x2 into a
+    sub c               ; Subtracts x1 to get length of line
+    ret z               ; If x2 - x1 = 0, we have no line to draw, end it.
+    ld b, a             ; Stores length of line as loop counter in b
+    ld l, c             ; h already has y; loads x1 into l, so PlotPixel8K has y,x into h,l
+pri_line_hor_loop:      ; Start drawing!
+    ;jp _stop            ; DEBUG: OUR FIRST TIME HERE WE HAVE x1=5A, x2=5B, y=3C CORRECT | BUT x1 ISN'T INCREASING AFTER THIS IS EXECUTED...
+    ld c, h             ; Let's preserve h since PlotPixel8K destroys it
+    call PlotPixel8K    ; Draw! Yey!
+    ld h, c             ; Restore h after PlotPixel8K's execution
+    dec b               ; Decrease loop (size of horizontal line)
+    ret z               ; Ends when b = 0
+    inc l               ; Increments x before drawing again
+    jp pri_line_hor_loop; Loops back
+
+;extern void fillTrigL2(Point pt0, Point pt1, Point pt2, uint8_t colour) __z88dk_callee;
+; A filled triangle drawing routine
+;=================================================================================================
+;PUBLIC _fillTrigL2, fillTrigL2
+;_fillTrigL2:            ; The triangle drawns from top to bottom, we need to ensure p0 < p1 < p2 on its y, so we order it as such
+;    p0: defw 0          ; Variable (mem address) to store p0
+;    p1: defw 0          ; Variable (mem address) to store p1
+;    p2: defw 0          ; Variable (mem address) to store p2
+;    x01: defw 0xFA00    ; Memory start of x01 array is 64000
+;    x12: defw 0xFAC0    ; Memory start of x12 array is 64192
+;    x02: defw 0xFB80    ; Memory start of x02 array is 64384
 ;    pop iy              ; Pops sp into iy
 ;    pop hl              ; Pops p0.y and p0.x into hl
-;    ld (iy + 02h), l    ; Loads p0.x into iy + 2
-;    ld (iy + 03h), h    ; Loads p0.y into iy + 3
 ;    pop de              ; Pops p1.y and p1.x into de
-;    ld (iy + 04h), e    ; Loads p1.x into iy + 4
-;    ld (iy + 05h), d    ; Loads p1.y into iy + 5
+;    ld a, d             ; Loads p1.y into a
+;    cp h                ; Compares p1.y with p0.y
+;    jr nc, _seq1        ; If p1.y > p0.y, no need to swap, jump
+;    ex de, hl           ; Swap p0 and p1, de now has the largest y of the two
+;    ;jp _stop
+;_seq1:                  ; Here we have p0.y < p1.y | h < d, now we need to check p2
 ;    pop bc              ; Pops p2.y and p2.x into bc
-;    ld (iy + 06h), c    ; Loads p2.x into iy + 6
-;    ld (iy + 07h), b    ; Loads p2.y into iy + 7
-;    pop bc              ; Pops colour into c
-;    ld ixl, c           ; Loads colour into ixl
+;    ld a, b             ; Loads p2.y into a
+;    cp d                ; Compares p2.y with p1.y
+;    jr nc, _seq2        ; If p2.y > p1.y, and here we already have p1.y > p0.y, we are done and jump out
+;    push bc             ; If p2.y < p1.y we need to swap p2 with p1, so we push p2 into stack
+;    push de             ; Push p1 into stack
+;    pop bc              ; Pop p1 into bc, becoming the new p2 > p1 on y
+;    pop de              ; Pop p2 into de, becoming the new p1 < p2 on y
+;    ld a, d             ; Lastly, we need to compare the new p1 < p0, if not swap them
+;    cp h                ; Compares the new p1.y with p0.y
+;    jr nc, _seq2        ; If p1.y > p0.y, no need to swap, jump
+;    ex de, hl           ; Swap p0 and p1. Now we have p0 < p1 < p2 on the y axis (lh < de < bc)
+;    ;jp _stop           DEBUG: All good here: hl 3C5A | de 7896 | bc B464 -- the correct testing coords ******
+;_seq2:
+;    ld (p0), hl         ; Stores p0
+;    ld (p1), de         ; Stores p1
+;    ld (p2), bc         ; Stores p2
+;    pop bc              ; Pops colour value into c
+;    push iy             ; Restores stack
+;    ld iyl, c           ; Loads colour into iyl
+;    ;jp _stop           DEBUG: All good here
 ;
-;trigL2:
-;    call drawL2         ; hl and de already have p0.y, p0,x, p1,y and p1,x
-;    ld l, (iy + 04h)
-;    ld h, (iy + 05h)
-;    ld e, (iy + 06h)
-;    ld d, (iy + 07h)
-;    call drawL2
-;    ld l, (iy + 06h)
-;    ld h, (iy + 07h)
-;    ld e, (iy + 02h)
-;    ld d, (iy + 03h)
-;    call drawL2
-;    ld a, 255
-;    push iy
+;fillTrigL2:             ; We begin with certainty that p0 < p1 < p2 on y
+;    nop
+;interpolate_p0:         ; Interpolates p0.y, p0.x (hl) with p1.y, p1.x (de) and fills memory in iy with the interpolations
+;    ld iy, x01          ; Sets the starting address of the array x01 at 64000 (FA00)
+;    ld a, d             ; Loads p1.y into a for comparison with p0.y
+;    cp h                ; Compares p0.y with p1.y
+;    jr nz, inter_p0_1   ; If Z is not set, jump. If it is, p0.y = p1.y, do we just return p0.x
+;    ld (iy), l          ; Return p0.x only, that's all, by loading it into the array x01 kept in memory
+;    ret                 ; We are done
+;inter_p0_1:
+;    sub h               ; We have got p0.y on h and p1.y on d as we just compared them, thus a now has deltay
+;    ld b, a             ; Loads deltay into b
+;    ld a, e             ; Loads p1.x into e
+;    sub l               ; Subtracts p1.x - p0.x to get deltax
+;    ld c, a             ; Loads deltax into c
+;    ;Self modify here to reuse deltax befor we destroy it
+;    
 ;    ret
