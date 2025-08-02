@@ -394,8 +394,8 @@ draw_triangle:
     ld bc, (Tri_ac_r0)  ; Loads the first point of the horizontal line
     ld de, (Tri_ab_r0)  ; Loads the second point of the horizontal line
     
-    ; C is correct, E is off
-    call pri_line_hor   ; Draws the line between the two points, filling this step of the triangle
+;    call pri_line_hor   ; Draws the line between the two points, filling this step of the triangle
+    call pri_line_hor_quick   ; Draws the line between the two points, filling this step of the triangle, only sets bank at start
     pop hl              ; Restores hl
     inc h               ; Increments y *** ORIGINAL CODE IS HL, BUT I THINK IT WANTS TO INCREMENT Y ***
     pop bc              ; Restores loop counter and y index
@@ -521,7 +521,37 @@ pri_tri_lc_seq:
 
     ; E and C 
 
+;================================================================================================= 
+; Quicker version setting bank at the start
+; HL = YX, IYL = colour
+;================================================================================================= 
+pri_line_hor_quick:          	; A horizontal line drawing routine
+    ld a, e         	    	; Loads x2 into a
+    sub c   		            ; Subtracts x1 to get length of line
+    ret z               		; If x2 - x1 = 0, we have no line to draw, end it.
+
+    ld b, a             		; Stores length of line as loop counter in b
+    ld l,c
+	ld a, h 				    ; 0-31 per bank (8k)
+	and %11100000			    ; 3 bits for the 8 banks we can use
+	swapnib
+	rrca
+	add a, START_8K_BANK		; 8L bank for L2
+	nextreg MMU_REGISTER_0,a  	; Set bank to write into
+	ld a, h
+	and %00011111 		        ; This is our y (0-31)
+	ld h, a 				    ; Puts y it back in h
+    ld a, iyl                   ; Loads colour from iyl into a
+
+; do our loop
+qloop:
+	ld (hl), a			        ; Draw our pixel
+    inc l               		; Increases x1
+    djnz qloop 					; Decrease loop counter and jump back to draw next pixel
+    ret
+;================================================================================================= 
 ;    HL = YX
+;================================================================================================= 
 pri_line_hor:           ; bc has x1 on c; de has x2 on e
     ld a, e             ; Loads x2 into a
     sub c               ; Subtracts x1 to get length of line
