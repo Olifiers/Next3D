@@ -151,10 +151,10 @@ void main(void)
 //    trigL2(p0, p1, p2, 3);
 //    zx_border(INK_MAGENTA);
 
-    p0.x = 80; p0.y = 180;
-    //p0.x = 110; p0.y = 180;
-    p1.x = 190; p1.y = 120;
-    p2.x = 90; p2.y = 60;
+    //p0.x = 80; p0.y = 180;
+    p0.x = 150; p0.y = 20;
+    p1.x = 200; p1.y = 30;
+    p2.x = 90; p2.y = 40;
 
     trigL2(p0, p1, p2, 3);
     zx_border(INK_BLUE);
@@ -165,6 +165,30 @@ void main(void)
     PlotPixel8K(p0.x, p0.y, 0);
     PlotPixel8K(p1.x, p1.y, 0);
     PlotPixel8K(p2.x, p2.y, 0);
+
+    p0.x = 100; p0.y = 180;
+    p1.x = 150; p1.y = 120;
+    p2.x = 90; p2.y = 60;
+
+    trigL2(p0, p1, p2, 3);
+    fillTrigL2(p0, p1, p2, 56);
+    zx_border(INK_YELLOW);
+
+    PlotPixel8K(p0.x, p0.y, 0);
+    PlotPixel8K(p1.x, p1.y, 0);
+    PlotPixel8K(p2.x, p2.y, 0);
+
+    p0.x = 200; p0.y = 180;
+    p1.x = 199; p1.y = 181;
+    p2.x = 201; p2.y = 181;
+
+    //trigL2(p0, p1, p2, 3);
+    fillTrigL2(p0, p1, p2, 56);
+    zx_border(INK_MAGENTA);
+
+    //PlotPixel8K(p0.x, p0.y, 0);
+    //PlotPixel8K(p1.x, p1.y, 0);
+    //PlotPixel8K(p2.x, p2.y, 0);
 
     while(1){};
 
