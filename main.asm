@@ -478,7 +478,10 @@ pri_tri_p0p2:           ; Initialises the line p0-p2 (actually p2-p0)
 
 ; L and E = x1 and x2, d = deltay
 pri_tri_i:              ; Generic primitive triangle initialisation
-    ld (ix + XCoord), e      ; Stores first x from calling code back into the address - DEBUG: ix+0 has 5A here
+    
+	
+	
+	ld (ix + XCoord), e      ; Stores first x from calling code back into the address - DEBUG: ix+0 has 5A here
     ld a, l             ; Loads the second x from calling code into a
     sub e               ; Subtract both x to get to deltax
     ld h, a             ; h now has deltax
@@ -523,14 +526,16 @@ pri_tri_lc_seq:
 
 ;================================================================================================= 
 ; Quicker version setting bank at the start
-; HL = YX, IYL = colour
+; L = Y, IYL = colour
+; C = X start, E = X end 
 ;================================================================================================= 
 pri_line_hor_quick:          	; A horizontal line drawing routine
     ld a, e         	    	; Loads x2 into a
     sub c   		            ; Subtracts x1 to get length of line
     ret z               		; If x2 - x1 = 0, we have no line to draw, end it.
+	jr c, pri_line_back		; If carry is set, we are drawing right to left, so jump to pri_line_back
 
-    ld b, a             		; Stores length of line as loop counter in b
+	ld b, a             		; Stores length of line as loop counter in b
     ld l,c
 	ld a, h 				    ; 0-31 per bank (8k)
 	and %11100000			    ; 3 bits for the 8 banks we can use
@@ -544,11 +549,36 @@ pri_line_hor_quick:          	; A horizontal line drawing routine
     ld a, iyl                   ; Loads colour from iyl into a
 
 ; do our loop
-qloop:
+@qloop:
 	ld (hl), a			        ; Draw our pixel
     inc l               		; Increases x1
-    djnz qloop 					; Decrease loop counter and jump back to draw next pixel
+    djnz @qloop 					; Decrease loop counter and jump back to draw next pixel
     ret
+
+pri_line_back:
+;=================================================================================================
+	neg
+	ld b, a             		; Stores length of line as loop counter in b
+    ld l,c
+	ld a, h 				    ; 0-31 per bank (8k)
+	and %11100000			    ; 3 bits for the 8 banks we can use
+	swapnib
+	rrca
+	add a, START_8K_BANK		; 8L bank for L2
+	nextreg MMU_REGISTER_0,a  	; Set bank to write into
+	ld a, h
+	and %00011111 		        ; This is our y (0-31)
+	ld h, a 				    ; Puts y it back in h
+    ld a, iyl                   ; Loads colour from iyl into a
+
+; do our loop
+@qloop2:
+	ld (hl), a			        ; Draw our pixel
+    dec l               		; Increases x1
+    djnz @qloop2 					; Decrease loop counter and jump back to draw next pixel
+    ret
+
+
 ;================================================================================================= 
 ;    HL = YX
 ;================================================================================================= 

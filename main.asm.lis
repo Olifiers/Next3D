@@ -1,4 +1,4 @@
-C:/Users/Flash/AppData/Local/Temp/zcc0000418832062.asm:
+C:/Users/Flash/AppData/Local/Temp/zcc0000BC1053E82.asm:
      1                          MODULE main_asm
      2                          LINE 0, "main.asm"
 main.asm:
@@ -498,155 +498,185 @@ main.asm:
    478                          
    479                          ; L and E = x1 and x2, d = deltay
    480                          pri_tri_i:              ; Generic primitive triangle initialisation
-   481  01e3  dd7300                ld (ix + XCoord), e      ; Stores first x from calling code back into the address - DEBUG: ix+0 has 5A here
-   482  01e6  7d                    ld a, l             ; Loads the second x from calling code into a
-   483  01e7  93                    sub e               ; Subtract both x to get to deltax
-   484  01e8  67                    ld h, a             ; h now has deltax
-   485  01e9  0e00                  ld c, 0x00          ; Zeroes c
-   486                              ;jp _stop            ; DEBUG: ALL GOOD UP TO HERE - WITH OUR TEST TRIANGLE deltax is POS, so goes to seq1
-   487  01eb  f2f301                jp p, pri_tri_i_seq1;
-   488  01ee  ed44                  neg                 ; Neg a (which still has deltax)
-   489  01f0  67                    ld h, a             ; Stores new neg'ed deltax
-   490  01f1  0e01                  ld c, 0x01          ; c = 1
-   491                          pri_tri_i_seq1:
-   492  01f3  7c                    ld a, h             ; Loads deltax into a
-   493  01f4  ba                    cp d                ; Compares with deltay, if no carry, deltax > deltay
-   494                              ;jp _stop            ; DEBUG: ALL GOOD UP TO HERE. deltax < deltay (10 < 120) so we will set a carry here
-   495  01f5  3005                  jr nc, pri_tri_i_seq2   ; Jumps to seq2 in the code skipping next part
-   496  01f7  7c                    ld a, h             ; If deltay > deltax we swap them around
-   497  01f8  62                    ld h, d             ; Swapping...
-   498  01f9  57                    ld d, a             ; deltax and deltay are now swapped
-   499  01fa  cbc9                  set 1, c            ; And we set the deltay > deltax flag this way
-   500                              ;jp _stop            ; DEBUG: ALL GOOD UP TO HERE. deltay (d) has 0A, deltax (h) has 78, x (ix+0) has 5A, c has 02
-   501                          pri_tri_i_seq2:
-   502  01fc  dd7401                ld (ix + DeltaX), h      ; We store back deltax into its place in memory for the current line
-   503  01ff  dd7202                ld (ix + DeltaY), d      ; We store back deltay into its place in memory for the current line
-   504                              ;SRL H RR L !!! *** NEEDS DOUBLE CHECKING THIS
-   505  0202  cb3c                  srl h               ; error = error / 2
-   506                          
-   507  0204  dd7403                ld (ix + Error), h      ; New error stored into its place in memory for the current line
-   508  0207  dd7104                ld (ix + Flags), c      ; New flags stored into its place in memory for the current line
-   509                              ;jp _stop            ; DEBUG: ALL GOOD UP TO HERE. x (ix+0) has 5A, deltax (ix+1) has 78, deltay (ix+2) has 0A, error (ix+3) has 3C (half of deltay), flags (ix+4) has 02, ix has 94F8
-   510  020a  c9                    ret
-   511                          
-   512                          pri_tri_lc:
-   513  020b  ddcb044e              bit 1, (ix + Flags)     ; Return the correct loop counter by checking the flag state storage, if the value in ix + Flags has a bit 1 on pos 1
-   514  020f  2804                  jr z, pri_tri_lc_seq; If loop counter returns zero, jump
-   515  0211  dd4601                ld b, (ix + DeltaX)      ; Loads deltax into b for looping
-   516  0214  c9                    ret
-   517                          pri_tri_lc_seq:
-   518  0215  dd4602                ld b, (ix + DeltaY)      ; Loads deltay into b for looping
-   519                              ;jp _stop            ; DEBUG: SEEMS LIKE ALL GOOD UP TO HERE?
-   520  0218  c9                    ret
-   521                          
-   522                              ; E and C
-   523                          
-   524                          ;=================================================================================================
-   525                          ; Quicker version setting bank at the start
-   526                          ; HL = YX, IYL = colour
+   481                          
+   482                          
+   483                          
+   484  01e3  dd7300            	ld (ix + XCoord), e      ; Stores first x from calling code back into the address - DEBUG: ix+0 has 5A here
+   485  01e6  7d                    ld a, l             ; Loads the second x from calling code into a
+   486  01e7  93                    sub e               ; Subtract both x to get to deltax
+   487  01e8  67                    ld h, a             ; h now has deltax
+   488  01e9  0e00                  ld c, 0x00          ; Zeroes c
+   489                              ;jp _stop            ; DEBUG: ALL GOOD UP TO HERE - WITH OUR TEST TRIANGLE deltax is POS, so goes to seq1
+   490  01eb  f2f301                jp p, pri_tri_i_seq1;
+   491  01ee  ed44                  neg                 ; Neg a (which still has deltax)
+   492  01f0  67                    ld h, a             ; Stores new neg'ed deltax
+   493  01f1  0e01                  ld c, 0x01          ; c = 1
+   494                          pri_tri_i_seq1:
+   495  01f3  7c                    ld a, h             ; Loads deltax into a
+   496  01f4  ba                    cp d                ; Compares with deltay, if no carry, deltax > deltay
+   497                              ;jp _stop            ; DEBUG: ALL GOOD UP TO HERE. deltax < deltay (10 < 120) so we will set a carry here
+   498  01f5  3005                  jr nc, pri_tri_i_seq2   ; Jumps to seq2 in the code skipping next part
+   499  01f7  7c                    ld a, h             ; If deltay > deltax we swap them around
+   500  01f8  62                    ld h, d             ; Swapping...
+   501  01f9  57                    ld d, a             ; deltax and deltay are now swapped
+   502  01fa  cbc9                  set 1, c            ; And we set the deltay > deltax flag this way
+   503                              ;jp _stop            ; DEBUG: ALL GOOD UP TO HERE. deltay (d) has 0A, deltax (h) has 78, x (ix+0) has 5A, c has 02
+   504                          pri_tri_i_seq2:
+   505  01fc  dd7401                ld (ix + DeltaX), h      ; We store back deltax into its place in memory for the current line
+   506  01ff  dd7202                ld (ix + DeltaY), d      ; We store back deltay into its place in memory for the current line
+   507                              ;SRL H RR L !!! *** NEEDS DOUBLE CHECKING THIS
+   508  0202  cb3c                  srl h               ; error = error / 2
+   509                          
+   510  0204  dd7403                ld (ix + Error), h      ; New error stored into its place in memory for the current line
+   511  0207  dd7104                ld (ix + Flags), c      ; New flags stored into its place in memory for the current line
+   512                              ;jp _stop            ; DEBUG: ALL GOOD UP TO HERE. x (ix+0) has 5A, deltax (ix+1) has 78, deltay (ix+2) has 0A, error (ix+3) has 3C (half of deltay), flags (ix+4) has 02, ix has 94F8
+   513  020a  c9                    ret
+   514                          
+   515                          pri_tri_lc:
+   516  020b  ddcb044e              bit 1, (ix + Flags)     ; Return the correct loop counter by checking the flag state storage, if the value in ix + Flags has a bit 1 on pos 1
+   517  020f  2804                  jr z, pri_tri_lc_seq; If loop counter returns zero, jump
+   518  0211  dd4601                ld b, (ix + DeltaX)      ; Loads deltax into b for looping
+   519  0214  c9                    ret
+   520                          pri_tri_lc_seq:
+   521  0215  dd4602                ld b, (ix + DeltaY)      ; Loads deltay into b for looping
+   522                              ;jp _stop            ; DEBUG: SEEMS LIKE ALL GOOD UP TO HERE?
+   523  0218  c9                    ret
+   524                          
+   525                              ; E and C
+   526                          
    527                          ;=================================================================================================
-   528                          pri_line_hor_quick:          	; A horizontal line drawing routine
-   529  0219  7b                    ld a, e         	    	; Loads x2 into a
-   530  021a  91                    sub c   		            ; Subtracts x1 to get length of line
-   531  021b  c8                    ret z               		; If x2 - x1 = 0, we have no line to draw, end it.
-   532                          
-   533  021c  47                    ld b, a             		; Stores length of line as loop counter in b
-   534  021d  69                    ld l,c
-   535  021e  7c                	ld a, h 				    ; 0-31 per bank (8k)
-   536  021f  e6e0              	and %11100000			    ; 3 bits for the 8 banks we can use
-   537  0221  ed23              	swapnib
-   538  0223  0f                	rrca
-   539  0224  c612              	add a, START_8K_BANK		; 8L bank for L2
-   540  0226  ed9250            	nextreg MMU_REGISTER_0,a  	; Set bank to write into
-   541  0229  7c                	ld a, h
-   542  022a  e61f              	and %00011111 		        ; This is our y (0-31)
-   543  022c  67                	ld h, a 				    ; Puts y it back in h
-   544  022d  fd7d                  ld a, iyl                   ; Loads colour from iyl into a
-   545                          
-   546                          ; do our loop
-   547                          qloop:
-   548  022f  77                	ld (hl), a			        ; Draw our pixel
-   549  0230  2c                    inc l               		; Increases x1
-   550  0231  10fc                  djnz qloop 					; Decrease loop counter and jump back to draw next pixel
-   551  0233  c9                    ret
-   552                          ;=================================================================================================
-   553                          ;    HL = YX
-   554                          ;=================================================================================================
-   555                          pri_line_hor:           ; bc has x1 on c; de has x2 on e
-   556  0234  7b                    ld a, e             ; Loads x2 into a
-   557  0235  91                    sub c               ; Subtracts x1 to get length of line
-   558  0236  c8                    ret z               ; If x2 - x1 = 0, we have no line to draw, end it.
-   559                          
-   560  0237  47                    ld b, a             ; Stores length of line as loop counter in b
-   561  0238  69                    ld l, c             ; h already has y; loads x1 into l, so PlotPixel8K has y,x into h,l
-   562                          pri_line_hor_loop:      ; Start drawing!
-   563                              ;jp _stop            ; DEBUG: OUR FIRST TIME HERE WE HAVE x1=5A, x2=5B, y=3C CORRECT | BUT x1 ISN'T INCREASING AFTER THIS IS EXECUTED...
-   564  0239  4c                    ld c, h             ; Let's preserve h since PlotPixel8K destroys it
-   565  023a  cd5500                call PlotPixel8K    ; Draw! Yey!
-   566  023d  61                    ld h, c             ; Restore h after PlotPixel8K's execution
-   567  023e  2c                    inc l
-   568  023f  10f8                  djnz pri_line_hor_loop; Decrease loop counter and jump back to draw next pixel
-   569  0241  c9                    ret
-   570                          
-   571                          ;=================================================================================================
-   572                          ;extern void fillTrigL2(Point pt0, Point pt1, Point pt2, uint8_t colour) __z88dk_callee;
-   573                          ; A filled triangle drawing routine
-   574                          ;=================================================================================================
-   575                          ;PUBLIC _fillTrigL2, fillTrigL2
-   576                          ;_fillTrigL2:            ; The triangle drawns from top to bottom, we need to ensure p0 < p1 < p2 on its y, so we order it as such
-   577                          ;    p0: defw 0          ; Variable (mem address) to store p0
-   578                          ;    p1: defw 0          ; Variable (mem address) to store p1
-   579                          ;    p2: defw 0          ; Variable (mem address) to store p2
-   580                          ;    x01: defw 0xFA00    ; Memory start of x01 array is 64000
-   581                          ;    x12: defw 0xFAC0    ; Memory start of x12 array is 64192
-   582                          ;    x02: defw 0xFB80    ; Memory start of x02 array is 64384
-   583                          ;    pop iy              ; Pops sp into iy
-   584                          ;    pop hl              ; Pops p0.y and p0.x into hl
-   585                          ;    pop de              ; Pops p1.y and p1.x into de
-   586                          ;    ld a, d             ; Loads p1.y into a
-   587                          ;    cp h                ; Compares p1.y with p0.y
-   588                          ;    jr nc, _seq1        ; If p1.y > p0.y, no need to swap, jump
-   589                          ;    ex de, hl           ; Swap p0 and p1, de now has the largest y of the two
-   590                          ;    ;jp _stop
-   591                          ;_seq1:                  ; Here we have p0.y < p1.y | h < d, now we need to check p2
-   592                          ;    pop bc              ; Pops p2.y and p2.x into bc
-   593                          ;    ld a, b             ; Loads p2.y into a
-   594                          ;    cp d                ; Compares p2.y with p1.y
-   595                          ;    jr nc, _seq2        ; If p2.y > p1.y, and here we already have p1.y > p0.y, we are done and jump out
-   596                          ;    push bc             ; If p2.y < p1.y we need to swap p2 with p1, so we push p2 into stack
-   597                          ;    push de             ; Push p1 into stack
-   598                          ;    pop bc              ; Pop p1 into bc, becoming the new p2 > p1 on y
-   599                          ;    pop de              ; Pop p2 into de, becoming the new p1 < p2 on y
-   600                          ;    ld a, d             ; Lastly, we need to compare the new p1 < p0, if not swap them
-   601                          ;    cp h                ; Compares the new p1.y with p0.y
-   602                          ;    jr nc, _seq2        ; If p1.y > p0.y, no need to swap, jump
-   603                          ;    ex de, hl           ; Swap p0 and p1. Now we have p0 < p1 < p2 on the y axis (lh < de < bc)
-   604                          ;    ;jp _stop           DEBUG: All good here: hl 3C5A | de 7896 | bc B464 -- the correct testing coords ******
-   605                          ;_seq2:
-   606                          ;    ld (p0), hl         ; Stores p0
-   607                          ;    ld (p1), de         ; Stores p1
-   608                          ;    ld (p2), bc         ; Stores p2
-   609                          ;    pop bc              ; Pops colour value into c
-   610                          ;    push iy             ; Restores stack
-   611                          ;    ld iyl, c           ; Loads colour into iyl
-   612                          ;    ;jp _stop           DEBUG: All good here
-   613                          ;
-   614                          ;fillTrigL2:             ; We begin with certainty that p0 < p1 < p2 on y
-   615                          ;    nop
-   616                          ;interpolate_p0:         ; Interpolates p0.y, p0.x (hl) with p1.y, p1.x (de) and fills memory in iy with the interpolations
-   617                          ;    ld iy, x01          ; Sets the starting address of the array x01 at 64000 (FA00)
-   618                          ;    ld a, d             ; Loads p1.y into a for comparison with p0.y
-   619                          ;    cp h                ; Compares p0.y with p1.y
-   620                          ;    jr nz, inter_p0_1   ; If Z is not set, jump. If it is, p0.y = p1.y, do we just return p0.x
-   621                          ;    ld (iy), l          ; Return p0.x only, that's all, by loading it into the array x01 kept in memory
-   622                          ;    ret                 ; We are done
-   623                          ;inter_p0_1:
-   624                          ;    sub h               ; We have got p0.y on h and p1.y on d as we just compared them, thus a now has deltay
-   625                          ;    ld b, a             ; Loads deltay into b
-   626                          ;    ld a, e             ; Loads p1.x into e
-   627                          ;    sub l               ; Subtracts p1.x - p0.x to get deltax
-   628                          ;    ld c, a             ; Loads deltax into c
-   629                          ;    ;Self modify here to reuse deltax befor we destroy it
-   630                          ;
-   631                          ;    ret
-   632                          
+   528                          ; Quicker version setting bank at the start
+   529                          ; L = Y, IYL = colour
+   530                          ; C = X start, E = X end
+   531                          ;=================================================================================================
+   532                          pri_line_hor_quick:          	; A horizontal line drawing routine
+   533  0219  7b                    ld a, e         	    	; Loads x2 into a
+   534  021a  91                    sub c   		            ; Subtracts x1 to get length of line
+   535  021b  c8                    ret z               		; If x2 - x1 = 0, we have no line to draw, end it.
+   536  021c  3818              	jr c, pri_line_back		; If carry is set, we are drawing right to left, so jump to pri_line_back
+   537                          
+   538  021e  47                	ld b, a             		; Stores length of line as loop counter in b
+   539  021f  69                    ld l,c
+   540  0220  7c                	ld a, h 				    ; 0-31 per bank (8k)
+   541  0221  e6e0              	and %11100000			    ; 3 bits for the 8 banks we can use
+   542  0223  ed23              	swapnib
+   543  0225  0f                	rrca
+   544  0226  c612              	add a, START_8K_BANK		; 8L bank for L2
+   545  0228  ed9250            	nextreg MMU_REGISTER_0,a  	; Set bank to write into
+   546  022b  7c                	ld a, h
+   547  022c  e61f              	and %00011111 		        ; This is our y (0-31)
+   548  022e  67                	ld h, a 				    ; Puts y it back in h
+   549  022f  fd7d                  ld a, iyl                   ; Loads colour from iyl into a
+   550                          
+   551                          ; do our loop
+   552                          @qloop:
+   553  0231  77                	ld (hl), a			        ; Draw our pixel
+   554  0232  2c                    inc l               		; Increases x1
+   555  0233  10fc                  djnz @qloop 					; Decrease loop counter and jump back to draw next pixel
+   556  0235  c9                    ret
+   557                          
+   558                          pri_line_back:
+   559                          ;=================================================================================================
+   560  0236  ed44              	neg
+   561  0238  47                	ld b, a             		; Stores length of line as loop counter in b
+   562  0239  69                    ld l,c
+   563  023a  7c                	ld a, h 				    ; 0-31 per bank (8k)
+   564  023b  e6e0              	and %11100000			    ; 3 bits for the 8 banks we can use
+   565  023d  ed23              	swapnib
+   566  023f  0f                	rrca
+   567  0240  c612              	add a, START_8K_BANK		; 8L bank for L2
+   568  0242  ed9250            	nextreg MMU_REGISTER_0,a  	; Set bank to write into
+   569  0245  7c                	ld a, h
+   570  0246  e61f              	and %00011111 		        ; This is our y (0-31)
+   571  0248  67                	ld h, a 				    ; Puts y it back in h
+   572  0249  fd7d                  ld a, iyl                   ; Loads colour from iyl into a
+   573                          
+   574                          ; do our loop
+   575                          @qloop2:
+   576  024b  77                	ld (hl), a			        ; Draw our pixel
+   577  024c  2d                    dec l               		; Increases x1
+   578  024d  10fc                  djnz @qloop2 					; Decrease loop counter and jump back to draw next pixel
+   579  024f  c9                    ret
+   580                          
+   581                          
+   582                          ;=================================================================================================
+   583                          ;    HL = YX
+   584                          ;=================================================================================================
+   585                          pri_line_hor:           ; bc has x1 on c; de has x2 on e
+   586  0250  7b                    ld a, e             ; Loads x2 into a
+   587  0251  91                    sub c               ; Subtracts x1 to get length of line
+   588  0252  c8                    ret z               ; If x2 - x1 = 0, we have no line to draw, end it.
+   589                          
+   590  0253  47                    ld b, a             ; Stores length of line as loop counter in b
+   591  0254  69                    ld l, c             ; h already has y; loads x1 into l, so PlotPixel8K has y,x into h,l
+   592                          pri_line_hor_loop:      ; Start drawing!
+   593                              ;jp _stop            ; DEBUG: OUR FIRST TIME HERE WE HAVE x1=5A, x2=5B, y=3C CORRECT | BUT x1 ISN'T INCREASING AFTER THIS IS EXECUTED...
+   594  0255  4c                    ld c, h             ; Let's preserve h since PlotPixel8K destroys it
+   595  0256  cd5500                call PlotPixel8K    ; Draw! Yey!
+   596  0259  61                    ld h, c             ; Restore h after PlotPixel8K's execution
+   597  025a  2c                    inc l
+   598  025b  10f8                  djnz pri_line_hor_loop; Decrease loop counter and jump back to draw next pixel
+   599  025d  c9                    ret
+   600                          
+   601                          ;=================================================================================================
+   602                          ;extern void fillTrigL2(Point pt0, Point pt1, Point pt2, uint8_t colour) __z88dk_callee;
+   603                          ; A filled triangle drawing routine
+   604                          ;=================================================================================================
+   605                          ;PUBLIC _fillTrigL2, fillTrigL2
+   606                          ;_fillTrigL2:            ; The triangle drawns from top to bottom, we need to ensure p0 < p1 < p2 on its y, so we order it as such
+   607                          ;    p0: defw 0          ; Variable (mem address) to store p0
+   608                          ;    p1: defw 0          ; Variable (mem address) to store p1
+   609                          ;    p2: defw 0          ; Variable (mem address) to store p2
+   610                          ;    x01: defw 0xFA00    ; Memory start of x01 array is 64000
+   611                          ;    x12: defw 0xFAC0    ; Memory start of x12 array is 64192
+   612                          ;    x02: defw 0xFB80    ; Memory start of x02 array is 64384
+   613                          ;    pop iy              ; Pops sp into iy
+   614                          ;    pop hl              ; Pops p0.y and p0.x into hl
+   615                          ;    pop de              ; Pops p1.y and p1.x into de
+   616                          ;    ld a, d             ; Loads p1.y into a
+   617                          ;    cp h                ; Compares p1.y with p0.y
+   618                          ;    jr nc, _seq1        ; If p1.y > p0.y, no need to swap, jump
+   619                          ;    ex de, hl           ; Swap p0 and p1, de now has the largest y of the two
+   620                          ;    ;jp _stop
+   621                          ;_seq1:                  ; Here we have p0.y < p1.y | h < d, now we need to check p2
+   622                          ;    pop bc              ; Pops p2.y and p2.x into bc
+   623                          ;    ld a, b             ; Loads p2.y into a
+   624                          ;    cp d                ; Compares p2.y with p1.y
+   625                          ;    jr nc, _seq2        ; If p2.y > p1.y, and here we already have p1.y > p0.y, we are done and jump out
+   626                          ;    push bc             ; If p2.y < p1.y we need to swap p2 with p1, so we push p2 into stack
+   627                          ;    push de             ; Push p1 into stack
+   628                          ;    pop bc              ; Pop p1 into bc, becoming the new p2 > p1 on y
+   629                          ;    pop de              ; Pop p2 into de, becoming the new p1 < p2 on y
+   630                          ;    ld a, d             ; Lastly, we need to compare the new p1 < p0, if not swap them
+   631                          ;    cp h                ; Compares the new p1.y with p0.y
+   632                          ;    jr nc, _seq2        ; If p1.y > p0.y, no need to swap, jump
+   633                          ;    ex de, hl           ; Swap p0 and p1. Now we have p0 < p1 < p2 on the y axis (lh < de < bc)
+   634                          ;    ;jp _stop           DEBUG: All good here: hl 3C5A | de 7896 | bc B464 -- the correct testing coords ******
+   635                          ;_seq2:
+   636                          ;    ld (p0), hl         ; Stores p0
+   637                          ;    ld (p1), de         ; Stores p1
+   638                          ;    ld (p2), bc         ; Stores p2
+   639                          ;    pop bc              ; Pops colour value into c
+   640                          ;    push iy             ; Restores stack
+   641                          ;    ld iyl, c           ; Loads colour into iyl
+   642                          ;    ;jp _stop           DEBUG: All good here
+   643                          ;
+   644                          ;fillTrigL2:             ; We begin with certainty that p0 < p1 < p2 on y
+   645                          ;    nop
+   646                          ;interpolate_p0:         ; Interpolates p0.y, p0.x (hl) with p1.y, p1.x (de) and fills memory in iy with the interpolations
+   647                          ;    ld iy, x01          ; Sets the starting address of the array x01 at 64000 (FA00)
+   648                          ;    ld a, d             ; Loads p1.y into a for comparison with p0.y
+   649                          ;    cp h                ; Compares p0.y with p1.y
+   650                          ;    jr nz, inter_p0_1   ; If Z is not set, jump. If it is, p0.y = p1.y, do we just return p0.x
+   651                          ;    ld (iy), l          ; Return p0.x only, that's all, by loading it into the array x01 kept in memory
+   652                          ;    ret                 ; We are done
+   653                          ;inter_p0_1:
+   654                          ;    sub h               ; We have got p0.y on h and p1.y on d as we just compared them, thus a now has deltay
+   655                          ;    ld b, a             ; Loads deltay into b
+   656                          ;    ld a, e             ; Loads p1.x into e
+   657                          ;    sub l               ; Subtracts p1.x - p0.x to get deltax
+   658                          ;    ld c, a             ; Loads deltax into c
+   659                          ;    ;Self modify here to reuse deltax befor we destroy it
+   660                          ;
+   661                          ;    ret
+   662                          

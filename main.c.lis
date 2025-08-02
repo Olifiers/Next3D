@@ -1,4 +1,4 @@
-C:/Users/Flash/AppData/Local/Temp/zcc0000418832063.asm:
+C:/Users/Flash/AppData/Local/Temp/zcc0000BC1053E83.asm:
      1                          MODULE main_c
      2                          LINE 0, "main.c"
 main.c:
@@ -1402,11 +1402,11 @@ main.c:
   1397  02f1  360a              	ld	(hl),0x0a
   1398  02f3  210100            	ld	hl,_y
   1399  02f6  3628              	ld	(hl),0x28
-  1400  02f8  2150b4            	ld	hl,0xb450
+  1400  02f8  219614            	ld	hl,0x1496
   1401  02fb  220700            	ld	(_p0),hl
-  1402  02fe  21be78            	ld	hl,0x78be
+  1402  02fe  21c81e            	ld	hl,0x1ec8
   1403  0301  220900            	ld	(_p1),hl
-  1404  0304  215a3c            	ld	hl,0x3c5a
+  1404  0304  215a28            	ld	hl,0x285a
   1405  0307  220b00            	ld	(_p2),hl
   1406  030a  3e03              	ld	a,0x03
   1407  030c  210c00            	ld	hl,_p2 + 1
@@ -1435,64 +1435,140 @@ main.c:
   1430  0335  cd0000            	call	_fillTrigL2
   1431  0338  2e02              	ld	l,0x02
   1432  033a  cd0000            	call	_zx_border_fastcall
-  1433  033d  3a0800            	ld	a,(_p0 + 1)
-  1434  0340  210700            	ld	hl,_p0
-  1435  0343  46                	ld	b, (hl)
+  1433  033d  210800            	ld	hl,+(_p0 + 1)
+  1434  0340  46                	ld	b, (hl)
+  1435  0341  3a0700            	ld	a,(_p0)
   1436  0344  2600              	ld	h,0x00
-  1437  0346  e5                	push	hl
-  1438  0347  33                	inc	sp
-  1439  0348  48                	ld	c,b
-  1440  0349  47                	ld	b,a
-  1441  034a  c5                	push	bc
-  1442  034b  cd0000            	call	_PlotPixel8K
-  1443  034e  3a0a00            	ld	a,(_p1 + 1)
-  1444  0351  210900            	ld	hl,_p1
-  1445  0354  46                	ld	b, (hl)
-  1446  0355  2600              	ld	h,0x00
+  1437  0346  68                	ld	l,b
+  1438  0347  e5                	push	hl
+  1439  0348  f5                	push	af
+  1440  0349  33                	inc	sp
+  1441  034a  cd0000            	call	_PlotPixel8K
+  1442  034d  210a00            	ld	hl,+(_p1 + 1)
+  1443  0350  46                	ld	b, (hl)
+  1444  0351  3a0900            	ld	a,(_p1)
+  1445  0354  2600              	ld	h,0x00
+  1446  0356  68                	ld	l,b
   1447  0357  e5                	push	hl
-  1448  0358  33                	inc	sp
-  1449  0359  48                	ld	c,b
-  1450  035a  47                	ld	b,a
-  1451  035b  c5                	push	bc
-  1452  035c  cd0000            	call	_PlotPixel8K
-  1453  035f  3a0c00            	ld	a,(_p2 + 1)
-  1454  0362  210b00            	ld	hl,_p2
-  1455  0365  46                	ld	b, (hl)
-  1456  0366  2600              	ld	h,0x00
-  1457  0368  e5                	push	hl
+  1448  0358  f5                	push	af
+  1449  0359  33                	inc	sp
+  1450  035a  cd0000            	call	_PlotPixel8K
+  1451  035d  210c00            	ld	hl,+(_p2 + 1)
+  1452  0360  46                	ld	b, (hl)
+  1453  0361  3a0b00            	ld	a,(_p2)
+  1454  0364  2600              	ld	h,0x00
+  1455  0366  68                	ld	l,b
+  1456  0367  e5                	push	hl
+  1457  0368  f5                	push	af
   1458  0369  33                	inc	sp
-  1459  036a  48                	ld	c,b
-  1460  036b  47                	ld	b,a
-  1461  036c  c5                	push	bc
-  1462  036d  cd0000            	call	_PlotPixel8K
-  1463                          l_main_00102:
-  1464  0370  18fe              	jr	l_main_00102
-  1465                          	SECTION data_compiler
-  1466                          _x:
-  1467  0000  00                	DEFB +0x00
-  1468                          _y:
-  1469  0001  00                	DEFB +0x00
-  1470                          _colour:
-  1471  0002  0f                	DEFB +0x0f
-  1472                          _x1:
-  1473  0003  14                	DEFB +0x14
-  1474                          _y1:
-  1475  0004  0a                	DEFB +0x0a
-  1476                          _x2:
-  1477  0005  5a                	DEFB +0x5a
-  1478                          _y2:
-  1479  0006  50                	DEFB +0x50
-  1480                          _p0:
-  1481  0007  64                	DEFB +0x64
-  1482  0008  0a                	DEFB +0x0a
-  1483                          _p1:
-  1484  0009  96                	DEFB +0x96
-  1485  000a  78                	DEFB +0x78
-  1486                          _p2:
-  1487  000b  aa                	DEFB +0xaa
-  1488  000c  3c                	DEFB +0x3c
-  1489                          _swap:
-  1490  000d  00                	DEFB +0x00
-  1491  000e  00                	DEFB +0x00
-  1492                          	SECTION IGNORE
-  1493                          
+  1459  036a  cd0000            	call	_PlotPixel8K
+  1460  036d  2164b4            	ld	hl,0xb464
+  1461  0370  220700            	ld	(_p0),hl
+  1462  0373  219678            	ld	hl,0x7896
+  1463  0376  220900            	ld	(_p1),hl
+  1464  0379  215a3c            	ld	hl,0x3c5a
+  1465  037c  220b00            	ld	(_p2),hl
+  1466  037f  3e03              	ld	a,0x03
+  1467  0381  210c00            	ld	hl,_p2 + 1
+  1468  0384  f5                	push	af
+  1469  0385  33                	inc	sp
+  1470  0386  46                	ld	b, (hl)
+  1471  0387  2b                	dec	hl
+  1472  0388  4e                	ld	c, (hl)
+  1473  0389  2a0900            	ld	hl,(_p1)
+  1474  038c  c5                	push	bc
+  1475  038d  e5                	push	hl
+  1476  038e  2a0700            	ld	hl,(_p0)
+  1477  0391  e5                	push	hl
+  1478  0392  cd0000            	call	_trigL2
+  1479  0395  3e38              	ld	a,0x38
+  1480  0397  f5                	push	af
+  1481  0398  33                	inc	sp
+  1482  0399  2a0b00            	ld	hl,(_p2)
+  1483  039c  e5                	push	hl
+  1484  039d  2a0900            	ld	hl,(_p1)
+  1485  03a0  e5                	push	hl
+  1486  03a1  2a0700            	ld	hl,(_p0)
+  1487  03a4  e5                	push	hl
+  1488  03a5  cd0000            	call	_fillTrigL2
+  1489  03a8  2e06              	ld	l,0x06
+  1490  03aa  cd0000            	call	_zx_border_fastcall
+  1491  03ad  210800            	ld	hl,+(_p0 + 1)
+  1492  03b0  46                	ld	b, (hl)
+  1493  03b1  3a0700            	ld	a,(_p0)
+  1494  03b4  2600              	ld	h,0x00
+  1495  03b6  68                	ld	l,b
+  1496  03b7  e5                	push	hl
+  1497  03b8  f5                	push	af
+  1498  03b9  33                	inc	sp
+  1499  03ba  cd0000            	call	_PlotPixel8K
+  1500  03bd  210a00            	ld	hl,+(_p1 + 1)
+  1501  03c0  46                	ld	b, (hl)
+  1502  03c1  3a0900            	ld	a,(_p1)
+  1503  03c4  2600              	ld	h,0x00
+  1504  03c6  68                	ld	l,b
+  1505  03c7  e5                	push	hl
+  1506  03c8  f5                	push	af
+  1507  03c9  33                	inc	sp
+  1508  03ca  cd0000            	call	_PlotPixel8K
+  1509  03cd  210c00            	ld	hl,+(_p2 + 1)
+  1510  03d0  46                	ld	b, (hl)
+  1511  03d1  3a0b00            	ld	a,(_p2)
+  1512  03d4  2600              	ld	h,0x00
+  1513  03d6  68                	ld	l,b
+  1514  03d7  e5                	push	hl
+  1515  03d8  f5                	push	af
+  1516  03d9  33                	inc	sp
+  1517  03da  cd0000            	call	_PlotPixel8K
+  1518  03dd  21c8b4            	ld	hl,0xb4c8
+  1519  03e0  220700            	ld	(_p0),hl
+  1520  03e3  21c7b5            	ld	hl,0xb5c7
+  1521  03e6  220900            	ld	(_p1),hl
+  1522  03e9  21c9b5            	ld	hl,0xb5c9
+  1523  03ec  220b00            	ld	(_p2),hl
+  1524  03ef  3e38              	ld	a,0x38
+  1525  03f1  210c00            	ld	hl,_p2 + 1
+  1526  03f4  f5                	push	af
+  1527  03f5  33                	inc	sp
+  1528  03f6  46                	ld	b, (hl)
+  1529  03f7  2b                	dec	hl
+  1530  03f8  4e                	ld	c, (hl)
+  1531  03f9  2a0900            	ld	hl,(_p1)
+  1532  03fc  c5                	push	bc
+  1533  03fd  e5                	push	hl
+  1534  03fe  2a0700            	ld	hl,(_p0)
+  1535  0401  e5                	push	hl
+  1536  0402  cd0000            	call	_fillTrigL2
+  1537  0405  2e03              	ld	l,0x03
+  1538  0407  cd0000            	call	_zx_border_fastcall
+  1539                          l_main_00102:
+  1540  040a  18fe              	jr	l_main_00102
+  1541                          	SECTION data_compiler
+  1542                          _x:
+  1543  0000  00                	DEFB +0x00
+  1544                          _y:
+  1545  0001  00                	DEFB +0x00
+  1546                          _colour:
+  1547  0002  0f                	DEFB +0x0f
+  1548                          _x1:
+  1549  0003  14                	DEFB +0x14
+  1550                          _y1:
+  1551  0004  0a                	DEFB +0x0a
+  1552                          _x2:
+  1553  0005  5a                	DEFB +0x5a
+  1554                          _y2:
+  1555  0006  50                	DEFB +0x50
+  1556                          _p0:
+  1557  0007  64                	DEFB +0x64
+  1558  0008  0a                	DEFB +0x0a
+  1559                          _p1:
+  1560  0009  96                	DEFB +0x96
+  1561  000a  78                	DEFB +0x78
+  1562                          _p2:
+  1563  000b  aa                	DEFB +0xaa
+  1564  000c  3c                	DEFB +0x3c
+  1565                          _swap:
+  1566  000d  00                	DEFB +0x00
+  1567  000e  00                	DEFB +0x00
+  1568                          	SECTION IGNORE
+  1569                          
