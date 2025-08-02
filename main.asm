@@ -13,13 +13,13 @@ EXTERN  _colour:    db  0
     Tri_ac_r0: defs 1   ; x
     Tri_ac_r1: defs 1   ; Width/deltax
     Tri_ac_r2: defs 1   ; Height/deltay
-    Tri_ac_r3: defs 1   ; Berror Bresenhams
+    Tri_ac_r3: defs 1   ; Error Bresenhams
     Tri_ac_r4: defs 1   ; Quadrant... Direction... Bit? 0 or 1 -- Flags
     ; Triangle line p0-p1
     Tri_ab_r0: defs 1   ; x
     Tri_ab_r1: defs 1   ; Width/deltax
     Tri_ab_r2: defs 1   ; Height/deltay
-    Tri_ab_r3: defs 1   ; Berror Bresenhams
+    Tri_ab_r3: defs 1   ; Error Bresenhams
     Tri_ab_r4: defs 1   ; Quadrant... Direction... Bit? 0 or 1 -- Flags
     ; Triangle point coordinates
     p0: defs 2          ; p0.y and p0.x
@@ -34,7 +34,7 @@ EXTERN  _colour:    db  0
     XCoord: = 0
     DeltaX: = 1
     DeltaY: = 2
-    Berror: = 3
+    Error: = 3
     Flags: = 4
 ; extern void stop(void)
 ; A debugging tool. Jump here (jp _stop) from your code so you can stop and inspect registers etc.
@@ -377,11 +377,10 @@ fillTrigL2:
     pop hl              ; Restores hl from stack
 
 draw_triangle:
-    ld a, b             ; We'll check if the triangle height is zero, first we load the loop counter here from pri_tri_lc
-    ;or c                ; THIS WAS FROM OLD 16bits CODE TO DEAL WITH COUNTER BEING ORIGINALLY BC, SO IT MERGED B AND C WITH AN OR
-    ld c, 0x00          ; Because we need a test for zero below in case the loop counter gets here as zero...
-    cp c                ; We load zero into c and compare it with a (which contains the loop from b)
-    ret z               ; If it's zero, means loop counter is done, we end it
+    ld a, b             ; We'll check if the triangle height is zero, first we load the loop counter here from pri_tri_l
+    or a
+    ret z               ; If it's zero, we are done, return
+ 
     push bc             ; Stack the loop counter - important because pri_tri_b destroys b (our counter)
     push hl             ; Stacks y
     ld ix, Tri_ac_r0    ; Switches to p0-p2 line
@@ -394,7 +393,8 @@ draw_triangle:
     push hl             ; Stacks hl again, but hl remains restored
     ld bc, (Tri_ac_r0)  ; Loads the first point of the horizontal line
     ld de, (Tri_ab_r0)  ; Loads the second point of the horizontal line
-
+    
+    ; C is correct, E is off
     call pri_line_hor   ; Draws the line between the two points, filling this step of the triangle
     pop hl              ; Restores hl
     inc h               ; Increments y *** ORIGINAL CODE IS HL, BUT I THINK IT WANTS TO INCREMENT Y ***
@@ -403,7 +403,7 @@ draw_triangle:
     jr draw_triangle    ; Loops back to top
 
 pri_tri_b:              ; Bresenhams calculations go here
-    ld h, (ix + Berror)      ; Loads Bresenhams error into h, works for both lines depending on where ix is pointing to (Tri_ac_r0 or Tri_ab_r0)
+    ld h, (ix + Error)      ; Loads Bresenhams error into h, works for both lines depending on where ix is pointing to (Tri_ac_r0 or Tri_ab_r0)
     ld b, (ix + DeltaX)      ; Loads deltax into b
     ld d, (ix + DeltaY)      ; Loads deltay into d
     bit 1, (ix + Flags)     ; Checks quadrant of line but comparing with the bit on the flag store
@@ -416,15 +416,18 @@ pri_tri_b:              ; Bresenhams calculations go here
     ld h, a             ; Stores error back on h
     call pri_tri_x      ; Moves the x coordinate ***CHECK THIS!!!***
 pri_tri_b_seq1:         ; Jumps to store the error if no carry, skipping the error + deltax step
-    ld (ix + Berror), h      ; Stores the error into its place for this specific line
+    ld (ix + Error), h      ; Stores the error into its place for this specific line
     ret                 ; We're done here and return
+
+    
 pri_tri_b_seq2:
     call pri_tri_x      ; Moves the x coordinate of the line left or right depending on case
     ld a, h             ; Loads error into a
     sub d               ; Subtracts deltay (error = error - deltay)
+    ld h,a
     jr nc, pri_tri_b_seq2; If no carry, loops right back up to work on error again until carry set
-    add b               ; Carry was set, we now add deltax (error = error + deltax)
-    ld (ix + Berror), h      ; Stores the error into its place for this specific line
+    add a,b               ; Carry was set, we now add deltax (error = error + deltax)
+    ld (ix + Error), a      ; Stores the error into its place for this specific line
     ret                 ; We're done here and return
 
 pri_tri_x:              ; Moves x coord 1 pixel left or right depending on the line type
@@ -471,9 +474,9 @@ pri_tri_p0p2:           ; Initialises the line p0-p2 (actually p2-p0)
     ld d, a             ; Stores deltay into d
     ;jp _stop            ; DEBUG: ALL GOOD UP TO HERE
     ;jr pri_tri_i        ; Unnecessary here as pri_tri_i is right below
+    
 
-
-; L and E = x1 and x2
+; L and E = x1 and x2, d = deltay
 pri_tri_i:              ; Generic primitive triangle initialisation
     ld (ix + XCoord), e      ; Stores first x from calling code back into the address - DEBUG: ix+0 has 5A here
     ld a, l             ; Loads the second x from calling code into a
@@ -500,7 +503,8 @@ pri_tri_i_seq2:
     ld (ix + DeltaY), d      ; We store back deltay into its place in memory for the current line
     ;SRL H RR L !!! *** NEEDS DOUBLE CHECKING THIS
     srl h               ; error = error / 2
-    ld (ix + Berror), h      ; New error stored into its place in memory for the current line
+    
+    ld (ix + Error), h      ; New error stored into its place in memory for the current line
     ld (ix + Flags), c      ; New flags stored into its place in memory for the current line
     ;jp _stop            ; DEBUG: ALL GOOD UP TO HERE. x (ix+0) has 5A, deltax (ix+1) has 78, deltay (ix+2) has 0A, error (ix+3) has 3C (half of deltay), flags (ix+4) has 02, ix has 94F8
     ret
@@ -515,10 +519,14 @@ pri_tri_lc_seq:
     ;jp _stop            ; DEBUG: SEEMS LIKE ALL GOOD UP TO HERE?
     ret 
 
+    ; E and C 
+
+;    HL = YX
 pri_line_hor:           ; bc has x1 on c; de has x2 on e
     ld a, e             ; Loads x2 into a
     sub c               ; Subtracts x1 to get length of line
     ret z               ; If x2 - x1 = 0, we have no line to draw, end it.
+
     ld b, a             ; Stores length of line as loop counter in b
     ld l, c             ; h already has y; loads x1 into l, so PlotPixel8K has y,x into h,l
 pri_line_hor_loop:      ; Start drawing!
@@ -526,11 +534,11 @@ pri_line_hor_loop:      ; Start drawing!
     ld c, h             ; Let's preserve h since PlotPixel8K destroys it
     call PlotPixel8K    ; Draw! Yey!
     ld h, c             ; Restore h after PlotPixel8K's execution
-    dec b               ; Decrease loop (size of horizontal line)
-    ret z               ; Ends when b = 0
-    inc l               ; Increments x before drawing again
-    jp pri_line_hor_loop; Loops back
+    inc l
+    djnz pri_line_hor_loop; Decrease loop counter and jump back to draw next pixel
+    ret
 
+;================================================================================================= 
 ;extern void fillTrigL2(Point pt0, Point pt1, Point pt2, uint8_t colour) __z88dk_callee;
 ; A filled triangle drawing routine
 ;=================================================================================================
